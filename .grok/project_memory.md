@@ -1,0 +1,4 @@
+- Building NA Virtual Meeting Platform (Zoom-like for Narcotics Anonymous) [2026-11-05]
+- Deliverables: Specification MD + working web prototype (index.html) saved in artifacts [2026-11-05]
+- Features: Leader/Attendee roles, 3 meetings/week accountability with ban, 48h change window, 24/7 scheduling, sponsor matching page, PeerJS video demo, NA readings
+- Prototype uses localStorage, Tailwind, client-side rules; production needs backend + SFU video

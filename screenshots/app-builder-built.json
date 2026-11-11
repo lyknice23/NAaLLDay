@@ -1,0 +1,41 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "ALL DAY NA",
+      "hasCanvas": false,
+      "bodyTextLen": 231,
+      "bodyTextHash": "a2912eb83522d805edc7ea9450d12108ccc19f3e0dd77b9750323d9b4e01f4d4",
+      "bodyTextPrefix": "How will you take part? First name only. Leaders schedule and gu",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "ALL DAY NA",
+      "hasCanvas": false,
+      "bodyTextLen": 231,
+      "bodyTextHash": "a2912eb83522d805edc7ea9450d12108ccc19f3e0dd77b9750323d9b4e01f4d4",
+      "bodyTextPrefix": "How will you take part? First name only. Leaders schedule and gu",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": true,
+  "baselineReasons": [
+    "desktop: body text collapsed (1014 -> 231 chars)",
+    "mobile: body text collapsed (1014 -> 231 chars)"
+  ]
+}
