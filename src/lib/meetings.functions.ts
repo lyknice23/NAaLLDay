@@ -13,6 +13,10 @@ import {
 export type Profile = {
   displayName: string;
   role: "leader" | "attendee";
+  wantsSponsor: boolean;
+  canSponsor: boolean;
+  cleanSince: string | null;
+  cleanDays: number;
   leaderBanned: boolean;
   createdAt: string;
   hostedThisWeek: number;
@@ -70,6 +74,10 @@ const FORMATS = ["Discussion", "Speaker", "Step Study", "Literature", "Newcomer"
 type ProfileRow = {
   display_name: string;
   role: "leader" | "attendee";
+  wants_sponsor: boolean;
+  can_sponsor: boolean;
+  clean_since: string | null;
+  clean_days: number;
   leader_banned: boolean;
   created_at: string;
 };
@@ -129,8 +137,18 @@ async function applyBan(userId: string, profile: ProfileRow) {
 async function loadProfile(userId: string): Promise<Profile | null> {
   const sql = await getSql();
   const rows = await sql<ProfileRow>`
-    select display_name, role, leader_banned, created_at::text as created_at
-    from profiles where user_id = ${userId}
+    select p.display_name,
+           p.role,
+           p.wants_sponsor,
+           p.leader_banned,
+           p.created_at::text as created_at,
+           cj.clean_since::text as clean_since,
+           coalesce((current_date - cj.clean_since)::int, 0) as clean_days,
+           (cj.clean_since is not null
+             and cj.clean_since <= current_date - interval '2 years') as can_sponsor
+    from profiles p
+    left join clean_journals cj on cj.user_id = p.user_id
+    where p.user_id = ${userId}
   `;
   const row = rows[0];
   if (!row) return null;
@@ -140,6 +158,10 @@ async function loadProfile(userId: string): Promise<Profile | null> {
   return {
     displayName: row.display_name,
     role: row.role,
+    wantsSponsor: Boolean(row.wants_sponsor),
+    canSponsor: Boolean(row.can_sponsor),
+    cleanSince: row.clean_since,
+    cleanDays: Number(row.clean_days ?? 0),
     leaderBanned,
     createdAt: row.created_at,
     ...stats,
@@ -570,6 +592,7 @@ export const saveSponsor = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const profile = await loadProfile(context.userId);
     if (!profile) return { ok: false as const, error: "Set up your name first." };
+    const sql = await getSql();
     let cleanTime = data.cleanTime;
     let yearsClean: number | null = null;
     let windowStart: number | null = null;
@@ -577,17 +600,25 @@ export const saveSponsor = createServerFn({ method: "POST" })
       if (!data.pledged) {
         return { ok: false as const, error: "Confirm that you have 2 years clean and will keep this 12-hour window." };
       }
-      if (data.yearsClean == null || data.yearsClean < 2 || data.yearsClean > 80) {
-        return { ok: false as const, error: "Sponsors need at least 2 years clean. Enter whole years." };
-      }
       if (data.windowStart == null || data.windowStart < 0 || data.windowStart > 23) {
         return { ok: false as const, error: "Pick the 12-hour window you can keep each day." };
       }
-      yearsClean = data.yearsClean;
+      const cleanRows = await sql<{ clean_days: number }>`
+        select (current_date - clean_since)::int as clean_days
+        from clean_journals where user_id = ${context.userId}
+      `;
+      const cleanDays = Number(cleanRows[0]?.clean_days ?? 0);
+      const actualYears = Math.floor(cleanDays / 365);
+      if (!cleanRows[0] || actualYears < 2) {
+        return {
+          ok: false as const,
+          error: "Sponsor access needs at least 2 years clean. Add your clean date in the Journal first.",
+        };
+      }
+      yearsClean = actualYears;
       windowStart = data.windowStart;
       cleanTime = `${yearsClean} years`;
     }
-    const sql = await getSql();
     await sql`
       insert into sponsors (user_id, kind, clean_time, note, years_clean, window_start)
       values (${context.userId}, ${data.kind}, ${cleanTime}, ${data.note}, ${yearsClean}, ${windowStart})
@@ -599,6 +630,9 @@ export const saveSponsor = createServerFn({ method: "POST" })
         window_start = excluded.window_start,
         created_at = now()
     `;
+    if (data.kind === "offering") {
+      await sql`update profiles set wants_sponsor = true where user_id = ${context.userId}`;
+    }
     return { ok: true as const };
   });
 

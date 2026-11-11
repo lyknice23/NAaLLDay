@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { AlertWatcher } from "@/components/alert-watcher";
+import { OnboardingGate } from "@/components/onboarding-gate";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "ALL DAY NA";
@@ -37,7 +38,9 @@ export const Route = createRootRoute({
         <PreviewHostBridge />
         <AuthProvider>
           <AlertWatcher />
-          <Outlet />
+          <OnboardingGate>
+            <Outlet />
+          </OnboardingGate>
         </AuthProvider>
         <Scripts />
       </body>

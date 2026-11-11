@@ -15,6 +15,10 @@ import { Route as JournalRouteImport } from './routes/journal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as SponsorsRouteImport } from './routes/sponsors'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as OnboardingProfileRouteImport } from './routes/onboarding/profile'
+import { Route as OnboardingRolesRouteImport } from './routes/onboarding/roles'
+import { Route as OnboardingTermsRouteImport } from './routes/onboarding/terms'
 import { Route as RoomMeetingIdRouteImport } from './routes/room.$meetingId'
 import { Route as SponsorChatChatIdRouteImport } from './routes/sponsor-chat.$chatId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -49,6 +53,26 @@ const SponsorsRoute = SponsorsRouteImport.update({
   path: '/sponsors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingProfileRoute = OnboardingProfileRouteImport.update({
+  id: '/onboarding/profile',
+  path: '/onboarding/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRolesRoute = OnboardingRolesRouteImport.update({
+  id: '/onboarding/roles',
+  path: '/onboarding/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingTermsRoute = OnboardingTermsRouteImport.update({
+  id: '/onboarding/terms',
+  path: '/onboarding/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoomMeetingIdRoute = RoomMeetingIdRouteImport.update({
   id: '/room/$meetingId',
   path: '/room/$meetingId',
@@ -72,6 +96,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/sponsors': typeof SponsorsRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/onboarding/profile': typeof OnboardingProfileRoute
+  '/onboarding/roles': typeof OnboardingRolesRoute
+  '/onboarding/terms': typeof OnboardingTermsRoute
   '/room/$meetingId': typeof RoomMeetingIdRoute
   '/sponsor-chat/$chatId': typeof SponsorChatChatIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -83,6 +111,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/sponsors': typeof SponsorsRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/onboarding/profile': typeof OnboardingProfileRoute
+  '/onboarding/roles': typeof OnboardingRolesRoute
+  '/onboarding/terms': typeof OnboardingTermsRoute
   '/room/$meetingId': typeof RoomMeetingIdRoute
   '/sponsor-chat/$chatId': typeof SponsorChatChatIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -95,6 +127,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/sponsors': typeof SponsorsRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/onboarding/profile': typeof OnboardingProfileRoute
+  '/onboarding/roles': typeof OnboardingRolesRoute
+  '/onboarding/terms': typeof OnboardingTermsRoute
   '/room/$meetingId': typeof RoomMeetingIdRoute
   '/sponsor-chat/$chatId': typeof SponsorChatChatIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -108,6 +144,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/notifications'
     | '/sponsors'
+    | '/verify-email'
+    | '/onboarding/profile'
+    | '/onboarding/roles'
+    | '/onboarding/terms'
     | '/room/$meetingId'
     | '/sponsor-chat/$chatId'
     | '/api/auth/$'
@@ -119,6 +159,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/notifications'
     | '/sponsors'
+    | '/verify-email'
+    | '/onboarding/profile'
+    | '/onboarding/roles'
+    | '/onboarding/terms'
     | '/room/$meetingId'
     | '/sponsor-chat/$chatId'
     | '/api/auth/$'
@@ -130,6 +174,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/notifications'
     | '/sponsors'
+    | '/verify-email'
+    | '/onboarding/profile'
+    | '/onboarding/roles'
+    | '/onboarding/terms'
     | '/room/$meetingId'
     | '/sponsor-chat/$chatId'
     | '/api/auth/$'
@@ -142,6 +190,10 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
   SponsorsRoute: typeof SponsorsRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
+  OnboardingProfileRoute: typeof OnboardingProfileRoute
+  OnboardingRolesRoute: typeof OnboardingRolesRoute
+  OnboardingTermsRoute: typeof OnboardingTermsRoute
   RoomMeetingIdRoute: typeof RoomMeetingIdRoute
   SponsorChatChatIdRoute: typeof SponsorChatChatIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -191,6 +243,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/profile': {
+      id: '/onboarding/profile'
+      path: '/onboarding/profile'
+      fullPath: '/onboarding/profile'
+      preLoaderRoute: typeof OnboardingProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/roles': {
+      id: '/onboarding/roles'
+      path: '/onboarding/roles'
+      fullPath: '/onboarding/roles'
+      preLoaderRoute: typeof OnboardingRolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/terms': {
+      id: '/onboarding/terms'
+      path: '/onboarding/terms'
+      fullPath: '/onboarding/terms'
+      preLoaderRoute: typeof OnboardingTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/room/$meetingId': {
       id: '/room/$meetingId'
       path: '/room/$meetingId'
@@ -222,6 +302,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
   SponsorsRoute: SponsorsRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
+  OnboardingProfileRoute: OnboardingProfileRoute,
+  OnboardingRolesRoute: OnboardingRolesRoute,
+  OnboardingTermsRoute: OnboardingTermsRoute,
   RoomMeetingIdRoute: RoomMeetingIdRoute,
   SponsorChatChatIdRoute: SponsorChatChatIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

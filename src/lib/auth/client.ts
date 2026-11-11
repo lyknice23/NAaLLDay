@@ -68,6 +68,19 @@ function setBearerToken(token: string | null): void {
 }
 
 /**
+ * Local HTTP development: Chromium rejects `__Host-` cookies on plain
+ * `http://localhost`/`127.0.0.1`, even though the cookie is marked Secure. Keep
+ * the session token instead and send it as a bearer, the same path the
+ * embedded live preview uses. No-op on deployed HTTPS origins.
+ */
+export function keepLocalSessionToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  const host = window.location.hostname;
+  if (host !== "localhost" && host !== "127.0.0.1" && host !== "[::1]") return;
+  setBearerToken(token);
+}
+
+/**
  * The sandbox live preview runs this app inside an iframe on a `*.grok-sandbox.com`
  * host, where a full-page redirect to the broker can't work — so sign-in uses a
  * popup there and a normal redirect everywhere else.

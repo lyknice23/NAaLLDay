@@ -95,6 +95,12 @@ function SponsorsPage() {
           <p className="mt-2 text-muted">
             Say if you are looking, or if you can sponsor. First names only. A connection is a private video between the two of you.
           </p>
+          {!profile.canSponsor ? (
+            <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm leading-relaxed text-fg">
+              Sponsor access needs at least 2 years clean. Add your clean date in the
+              Journal, then come back to offer your time.
+            </p>
+          ) : null}
           <div className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm leading-relaxed text-fg">
             <p>To sponsor, you need at least 2 years clean, and you agree to be available for a private video conversation at least 12 hours a day. Pick that 12-hour window, for example 12am–12pm, in your local time.</p>
             <p className="mt-2 text-muted">
@@ -125,7 +131,7 @@ function SponsorsPage() {
           >
             <select value={kind} onChange={(event) => setKind(event.target.value as "seeking" | "offering")} className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-fg">
               <option value="seeking">Looking for a sponsor</option>
-              <option value="offering">Available to sponsor</option>
+              <option value="offering" disabled={!profile.canSponsor}>Available to sponsor</option>
             </select>
             {offering ? (
               <>

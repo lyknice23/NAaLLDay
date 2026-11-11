@@ -1,0 +1,5 @@
+# Build-time dependencies and native binaries stay on the build machine.
+# Vercel installs and builds them on its own Linux builders.
+node_modules
+**/*.node
+*.node

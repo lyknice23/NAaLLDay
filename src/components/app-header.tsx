@@ -33,7 +33,11 @@ export function AppHeader({ profile }: { profile: Profile }) {
           </Link>
           <span className="text-sm text-fg">
             {profile.displayName}
-            <span className="text-muted"> · {leading ? "Leader" : "Attendee"}</span>
+            <span className="text-muted">
+              {" "}
+              · {leading ? "Leader" : "Attendee"}
+              {profile.wantsSponsor ? " · Sponsor" : ""}
+            </span>
           </span>
           {account && !account.isDevFallback && <UserButton />}
         </nav>
