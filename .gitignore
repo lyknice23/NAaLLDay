@@ -4,3 +4,6 @@ node_modules/
 .github_repo
 .env
 .env.*
+.neon
+.vercel
+.env*.local

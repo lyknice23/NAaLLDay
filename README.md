@@ -30,7 +30,7 @@ final policy before launch.
 ### Meetings and video rooms
 
 - Leaders schedule meetings at any hour, choose a format (Discussion, Speaker,
-  Step Study, Literature, or Newcomer), and set a 60- or 90-minute length.
+  Step Study, Literature, or Newcomer). Every meeting is one hour long.
 - Attendees can sign up for a reminder or join directly from the board.
 - Rooms hold **50 people**. Joining closes **20 minutes after the scheduled
   start**; anyone who joined before the lock keeps access afterwards.
@@ -117,8 +117,10 @@ verification code is printed in the server log and shown on screen.
 | `RESEND_API_KEY`    | Production | Sends the 6-digit verification email. Without it, local development logs the code and shows it on the verification screen instead. |
 | `EMAIL_FROM`        | No         | Verified sender for Resend, for example `ALL DAY NA <hello@yourdomain.com>`. Defaults to Resend's onboarding sender.               |
 
-Never commit credentials. Set these variables in your shell or in the hosting
-provider's environment settings.
+Never commit credentials. For local development, put them in `.env.local`
+(ignored by Git); the `dev`, `build`, `preview`, and `db:migrate` scripts load
+that file automatically. In production, set them in the hosting provider's
+environment settings.
 
 With `DATABASE_URL` set, apply the schema once:
 

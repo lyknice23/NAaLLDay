@@ -63,7 +63,10 @@ function Setup({ onSaved }: { onSaved: (profile: Profile) => void }) {
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
       <p className="text-sm font-medium text-primary">How will you take part?</p>
       <h1 className="mt-2 font-display text-4xl text-fg">First name only.</h1>
-      <p className="mt-3 text-muted">Leaders schedule and guide meetings. Attendees join. You can change this later unless leader access is suspended.</p>
+      <p className="mt-3 text-muted">
+        Leaders schedule and guide meetings. Attendees join. You can change this later unless leader
+        access is suspended.
+      </p>
       <form
         className="mt-8 space-y-4"
         onSubmit={(event) => {
@@ -72,10 +75,13 @@ function Setup({ onSaved }: { onSaved: (profile: Profile) => void }) {
           setError("");
           void saveProfile({ data: { displayName: name, role } })
             .then((result) => {
-              if (!result.ok || !result.profile) setError(result.ok ? "Could not save." : result.error);
+              if (!result.ok || !result.profile)
+                setError(result.ok ? "Could not save." : result.error);
               else onSaved(result.profile);
             })
-            .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not save."))
+            .catch((err: unknown) =>
+              setError(err instanceof Error ? err.message : "Could not save."),
+            )
             .finally(() => setPending(false));
         }}
       >
@@ -89,11 +95,25 @@ function Setup({ onSaved }: { onSaved: (profile: Profile) => void }) {
           />
         </label>
         <div className="grid grid-cols-2 gap-3">
-          <RoleChoice active={role === "leader"} onClick={() => setRole("leader")} title="Leader" detail="Schedule and guide" />
-          <RoleChoice active={role === "attendee"} onClick={() => setRole("attendee")} title="Attendee" detail="Join meetings" />
+          <RoleChoice
+            active={role === "leader"}
+            onClick={() => setRole("leader")}
+            title="Leader"
+            detail="Schedule and guide"
+          />
+          <RoleChoice
+            active={role === "attendee"}
+            onClick={() => setRole("attendee")}
+            title="Attendee"
+            detail="Join meetings"
+          />
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}
-        <button type="submit" disabled={pending || demoPending} className="h-12 w-full rounded-lg bg-primary font-semibold text-primary-fg disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={pending || demoPending}
+          className="h-12 w-full rounded-lg bg-primary font-semibold text-primary-fg disabled:opacity-60"
+        >
           {pending ? "Saving…" : "Enter"}
         </button>
       </form>
@@ -108,7 +128,9 @@ function Setup({ onSaved }: { onSaved: (profile: Profile) => void }) {
               if (result.profile) onSaved(result.profile);
               else setError("Could not load the demo.");
             })
-            .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not load the demo."))
+            .catch((err: unknown) =>
+              setError(err instanceof Error ? err.message : "Could not load the demo."),
+            )
             .finally(() => setDemoPending(false));
         }}
         className="mt-3 h-12 w-full rounded-lg border border-border font-semibold text-fg disabled:opacity-60"
@@ -142,7 +164,13 @@ function RoleChoice({
   );
 }
 
-function Dashboard({ profile, onProfile }: { profile: Profile; onProfile: (profile: Profile) => void }) {
+function Dashboard({
+  profile,
+  onProfile,
+}: {
+  profile: Profile;
+  onProfile: (profile: Profile) => void;
+}) {
   const [meetings, setMeetings] = useState<Meeting[] | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
@@ -176,7 +204,8 @@ function Dashboard({ profile, onProfile }: { profile: Profile; onProfile: (profi
       <main className="mx-auto max-w-5xl px-4 py-8">
         {profile.leaderBanned && (
           <p className="mb-6 rounded-lg border border-danger/40 bg-surface px-4 py-3 text-sm text-fg">
-            Leader access is suspended: last week had fewer than 3 meetings you guided through the end. You can still attend every meeting.
+            Leader access is suspended: last week had fewer than 3 meetings you guided through the
+            end. You can still attend every meeting.
           </p>
         )}
         {leading && (
@@ -189,11 +218,16 @@ function Dashboard({ profile, onProfile }: { profile: Profile; onProfile: (profi
                   <span className="text-2xl text-muted"> / 3</span>
                 </p>
                 <p className="mt-1 text-sm text-muted">
-                  {profile.scheduledThisWeek} scheduled. A meeting counts once it is over, and only if you were in the room to guide it.
-                  After your first week, a week under 3 counted meetings suspends leader access. Any hour is allowed.
+                  {profile.scheduledThisWeek} scheduled. A meeting counts once it is over, and only
+                  if you were in the room to guide it. After your first week, a week under 3 counted
+                  meetings suspends leader access. Any hour is allowed.
                 </p>
               </div>
-              <button type="button" onClick={() => setOpen((value) => !value)} className="h-11 rounded-lg bg-primary px-4 font-semibold text-primary-fg">
+              <button
+                type="button"
+                onClick={() => setOpen((value) => !value)}
+                className="h-11 rounded-lg bg-primary px-4 font-semibold text-primary-fg"
+              >
                 Schedule a meeting
               </button>
             </div>
@@ -221,7 +255,9 @@ function Dashboard({ profile, onProfile }: { profile: Profile; onProfile: (profi
                   if (result.profile) onProfile(result.profile);
                   return listMeetings().then(setMeetings);
                 })
-                .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not load the demo."))
+                .catch((err: unknown) =>
+                  setError(err instanceof Error ? err.message : "Could not load the demo."),
+                )
                 .finally(() => setDemoPending(false));
             }}
             className="h-11 rounded-lg border border-border px-4 font-semibold text-fg disabled:opacity-60"
@@ -231,12 +267,19 @@ function Dashboard({ profile, onProfile }: { profile: Profile; onProfile: (profi
         </div>
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         {meetings === null && !error && <p className="mt-4 text-muted">Loading meetings…</p>}
-        {meetings?.length === 0 && <p className="mt-4 text-muted">No meetings on the board yet. Try the demo, or schedule one any hour of the day.</p>}
+        {meetings?.length === 0 && (
+          <p className="mt-4 text-muted">
+            No meetings on the board yet. Try the demo, or schedule one any hour of the day.
+          </p>
+        )}
         <ul className="mt-4 space-y-3">
           {meetings?.map((meeting) => {
             const closed = Boolean(meeting.joinState && meeting.joinState !== "open");
             const lockLabel = meeting.lockAt
-              ? new Date(meeting.lockAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+              ? new Date(meeting.lockAt).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
               : "";
             return (
               <li
@@ -246,14 +289,17 @@ function Dashboard({ profile, onProfile }: { profile: Profile; onProfile: (profi
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold text-fg">{meeting.title}</h3>
                   <p className="text-sm text-muted">
-                    {meeting.format} · {new Date(meeting.startsAt).toLocaleString()} · {meeting.leaderName}
+                    {meeting.format} · {new Date(meeting.startsAt).toLocaleString()} ·{" "}
+                    {meeting.leaderName}
                     {meeting.mine ? " · yours" : ""}
                   </p>
                   <p className="mt-1 text-sm text-muted">
                     {meeting.signupCount ?? 0} signed up · {meeting.liveCount ?? 0} / 50 in the room
                     {!meeting.mine && !closed ? ` · joins close ${lockLabel}` : ""}
                   </p>
-                  {meeting.description && <p className="mt-1 text-sm text-fg">{meeting.description}</p>}
+                  {meeting.description && (
+                    <p className="mt-1 text-sm text-fg">{meeting.description}</p>
+                  )}
                   {meeting.mine && (
                     <p className="mt-1 text-sm text-primary">
                       {meeting.hosted
@@ -274,13 +320,17 @@ function Dashboard({ profile, onProfile }: { profile: Profile; onProfile: (profi
                       type="button"
                       onClick={() => {
                         setError("");
-                        void setSignup({ data: { meetingId: meeting.id, going: !meeting.signedUp } })
+                        void setSignup({
+                          data: { meetingId: meeting.id, going: !meeting.signedUp },
+                        })
                           .then((result) => {
                             if (!result.ok) setError(result.error);
                             else return listMeetings().then(setMeetings);
                           })
                           .catch((err: unknown) =>
-                            setError(err instanceof Error ? err.message : "Could not update signup."),
+                            setError(
+                              err instanceof Error ? err.message : "Could not update signup.",
+                            ),
                           );
                       }}
                       className={`inline-flex h-11 items-center justify-center rounded-lg border px-4 font-semibold ${meeting.signedUp ? "border-primary text-primary" : "border-border text-fg"}`}
@@ -290,7 +340,11 @@ function Dashboard({ profile, onProfile }: { profile: Profile; onProfile: (profi
                   )}
                   {closed && !meeting.mine ? (
                     <span className="inline-flex h-11 items-center rounded-lg border border-border px-4 text-sm text-muted">
-                      {meeting.joinState === "locked" ? "Joins closed" : meeting.joinState === "full" ? "Full" : "Ended"}
+                      {meeting.joinState === "locked"
+                        ? "Joins closed"
+                        : meeting.joinState === "full"
+                          ? "Full"
+                          : "Ended"}
                     </span>
                   ) : (
                     <Link
@@ -315,7 +369,6 @@ function ScheduleForm({ onCreated }: { onCreated: () => void }) {
   const [title, setTitle] = useState("");
   const [format, setFormat] = useState(FORMATS[0]);
   const [startsAt, setStartsAt] = useState("");
-  const [minutes, setMinutes] = useState(60);
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -328,30 +381,56 @@ function ScheduleForm({ onCreated }: { onCreated: () => void }) {
         setPending(true);
         setError("");
         void createMeeting({
-          data: { title, format, description, startsAt: new Date(startsAt).toISOString(), minutes },
+          data: { title, format, description, startsAt: new Date(startsAt).toISOString() },
         })
           .then((result) => {
             if (!result.ok) setError(result.error);
             else onCreated();
           })
-          .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not schedule."))
+          .catch((err: unknown) =>
+            setError(err instanceof Error ? err.message : "Could not schedule."),
+          )
           .finally(() => setPending(false));
       }}
     >
-      <input required value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Meeting title" className="h-11 rounded-lg border border-border bg-bg px-3 text-fg" />
-      <select value={format} onChange={(event) => setFormat(event.target.value)} className="h-11 rounded-lg border border-border bg-bg px-3 text-fg">
+      <input
+        required
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        placeholder="Meeting title"
+        className="h-11 rounded-lg border border-border bg-bg px-3 text-fg"
+      />
+      <select
+        value={format}
+        onChange={(event) => setFormat(event.target.value)}
+        className="h-11 rounded-lg border border-border bg-bg px-3 text-fg"
+      >
         {FORMATS.map((item) => (
           <option key={item}>{item}</option>
         ))}
       </select>
-      <input required type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} className="h-11 rounded-lg border border-border bg-bg px-3 text-fg" />
-      <select value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} className="h-11 rounded-lg border border-border bg-bg px-3 text-fg">
-        <option value={60}>1 hour</option>
-        <option value={90}>90 minutes</option>
-      </select>
-      <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Topic (optional)" className="h-11 rounded-lg border border-border bg-bg px-3 text-fg" />
+      <input
+        required
+        type="datetime-local"
+        value={startsAt}
+        onChange={(event) => setStartsAt(event.target.value)}
+        className="h-11 rounded-lg border border-border bg-bg px-3 text-fg"
+      />
+      <div className="flex h-11 items-center rounded-lg border border-border bg-surface px-3 text-sm text-muted">
+        Every meeting is 1 hour
+      </div>
+      <input
+        value={description}
+        onChange={(event) => setDescription(event.target.value)}
+        placeholder="Topic (optional)"
+        className="h-11 rounded-lg border border-border bg-bg px-3 text-fg"
+      />
       {error && <p className="text-sm text-danger sm:col-span-2">{error}</p>}
-      <button type="submit" disabled={pending} className="h-11 rounded-lg border border-border text-fg sm:col-span-2 disabled:opacity-60">
+      <button
+        type="submit"
+        disabled={pending}
+        className="h-11 rounded-lg border border-border text-fg sm:col-span-2 disabled:opacity-60"
+      >
         {pending ? "Scheduling…" : "Put it on the board"}
       </button>
     </form>
@@ -367,7 +446,9 @@ function Reschedule({ meeting, onDone }: { meeting: Meeting; onDone: () => void 
 
   if (!editable) {
     return (
-      <p className="mt-2 text-sm text-muted">Time is locked — a change must be made at least 48 hours ahead.</p>
+      <p className="mt-2 text-sm text-muted">
+        Time is locked — a change must be made at least 48 hours ahead.
+      </p>
     );
   }
 
@@ -388,7 +469,9 @@ function Reschedule({ meeting, onDone }: { meeting: Meeting; onDone: () => void 
             event.preventDefault();
             setPending(true);
             setError("");
-            void rescheduleMeeting({ data: { id: meeting.id, startsAt: new Date(value).toISOString() } })
+            void rescheduleMeeting({
+              data: { id: meeting.id, startsAt: new Date(value).toISOString() },
+            })
               .then((result) => {
                 if (!result.ok) setError(result.error);
                 else {
@@ -396,7 +479,9 @@ function Reschedule({ meeting, onDone }: { meeting: Meeting; onDone: () => void 
                   onDone();
                 }
               })
-              .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not change the time."))
+              .catch((err: unknown) =>
+                setError(err instanceof Error ? err.message : "Could not change the time."),
+              )
               .finally(() => setPending(false));
           }}
         >

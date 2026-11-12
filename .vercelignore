@@ -3,3 +3,8 @@
 node_modules
 **/*.node
 *.node
+
+# Local credentials and Neon CLI linkage stay on the development machine.
+.env
+.env.*
+.neon

@@ -62,7 +62,13 @@ export type SponsorChatSummary = {
 };
 
 export type PresencePeer = { userId: string; displayName: string };
-export type ChatMessage = { id: string; userId: string; displayName: string; body: string; createdAt: string };
+export type ChatMessage = {
+  id: string;
+  userId: string;
+  displayName: string;
+  body: string;
+  createdAt: string;
+};
 export type RtcSignal = { id: string; fromId: string; payload: string };
 
 // The rules live in `@/lib/room-access` so they can be tested with a fixed clock.
@@ -70,6 +76,7 @@ export { ROOM_CAPACITY, roomStateMessage };
 export type { RoomAccess, RoomState };
 
 const FORMATS = ["Discussion", "Speaker", "Step Study", "Literature", "Newcomer"] as const;
+const MEETING_MINUTES = 60;
 
 type ProfileRow = {
   display_name: string;
@@ -178,7 +185,9 @@ export const getMe = createServerFn({ method: "GET" })
 export const saveProfile = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { displayName: string; role: "leader" | "attendee" }) => {
-    const displayName = String(input?.displayName ?? "").trim().slice(0, 40);
+    const displayName = String(input?.displayName ?? "")
+      .trim()
+      .slice(0, 40);
     const role = input?.role === "leader" ? "leader" : input?.role === "attendee" ? "attendee" : "";
     if (!displayName) throw new Error("Enter a first name.");
     if (!role) throw new Error("Choose leader or attendee.");
@@ -192,7 +201,8 @@ export const saveProfile = createServerFn({ method: "POST" })
     if (existing[0]?.leader_banned && data.role === "leader") {
       return {
         ok: false as const,
-        error: "Leader access is suspended. You can still attend meetings, but you cannot lead them.",
+        error:
+          "Leader access is suspended. You can still attend meetings, but you cannot lead them.",
       };
     }
     await sql`
@@ -392,8 +402,18 @@ export const loadDemo = createServerFn({ method: "POST" })
     }
 
     const notes = [
-      ["demo-msg-1", "demo-open-discussion", "demo-riley", "Glad this one is open. I will mostly listen."],
-      ["demo-msg-2", "demo-open-discussion", "demo-morgan", "First time here. Is it okay to just sit?"],
+      [
+        "demo-msg-1",
+        "demo-open-discussion",
+        "demo-riley",
+        "Glad this one is open. I will mostly listen.",
+      ],
+      [
+        "demo-msg-2",
+        "demo-open-discussion",
+        "demo-morgan",
+        "First time here. Is it okay to just sit?",
+      ],
     ] as const;
     for (const [id, meetingId, userId, body] of notes) {
       await sql`
@@ -473,16 +493,19 @@ export const loadDemo = createServerFn({ method: "POST" })
 
 export const createMeeting = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { title: string; format: string; description: string; startsAt: string; minutes?: number }) => {
-    const title = String(input?.title ?? "").trim().slice(0, 80);
+  .validator((input: { title: string; format: string; description: string; startsAt: string }) => {
+    const title = String(input?.title ?? "")
+      .trim()
+      .slice(0, 80);
     const format = FORMATS.includes(input?.format as (typeof FORMATS)[number]) ? input.format : "";
-    const description = String(input?.description ?? "").trim().slice(0, 400);
+    const description = String(input?.description ?? "")
+      .trim()
+      .slice(0, 400);
     const starts = new Date(input?.startsAt);
-    const minutes = Number(input?.minutes) === 90 ? 90 : 60;
     if (!title) throw new Error("Give the meeting a title.");
     if (!format) throw new Error("Choose a format.");
     if (Number.isNaN(starts.getTime())) throw new Error("Choose a time.");
-    return { title, format, description, startsAt: starts.toISOString(), minutes };
+    return { title, format, description, startsAt: starts.toISOString() };
   })
   .handler(async ({ context, data }) => {
     const profile = await loadProfile(context.userId);
@@ -494,7 +517,9 @@ export const createMeeting = createServerFn({ method: "POST" })
     }
     const sql = await getSql();
     const id = crypto.randomUUID();
-    const endsAt = new Date(new Date(data.startsAt).getTime() + data.minutes * 60 * 1000).toISOString();
+    const endsAt = new Date(
+      new Date(data.startsAt).getTime() + MEETING_MINUTES * 60 * 1000,
+    ).toISOString();
     await sql`
       insert into meetings (id, leader_id, title, format, description, starts_at, ends_at)
       values (${id}, ${context.userId}, ${data.title}, ${data.format}, ${data.description}, ${data.startsAt}::timestamptz, ${endsAt}::timestamptz)
@@ -523,7 +548,8 @@ export const rescheduleMeeting = createServerFn({ method: "POST" })
       where id = ${data.id} and leader_id = ${context.userId}
     `;
     const row = rows[0];
-    if (!row) return { ok: false as const, error: "Only the leader of this meeting can change the time." };
+    if (!row)
+      return { ok: false as const, error: "Only the leader of this meeting can change the time." };
     if (new Date(row.starts_at).getTime() - Date.now() < 48 * 60 * 60 * 1000) {
       return {
         ok: false as const,
@@ -535,7 +561,7 @@ export const rescheduleMeeting = createServerFn({ method: "POST" })
     }
     await sql`
       update meetings set
-        ends_at = coalesce(ends_at, starts_at + interval '1 hour') + (${data.startsAt}::timestamptz - starts_at),
+        ends_at = ${data.startsAt}::timestamptz + interval '1 hour',
         starts_at = ${data.startsAt}::timestamptz
       where id = ${data.id} and leader_id = ${context.userId}
     `;
@@ -575,20 +601,34 @@ export const listSponsors = createServerFn({ method: "GET" })
 
 export const saveSponsor = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { kind: string; cleanTime: string; note: string; yearsClean?: number | null; windowStart?: number | null; pledged?: boolean }) => {
-    const kind = input?.kind === "offering" ? "offering" : input?.kind === "seeking" ? "seeking" : "";
-    if (!kind) throw new Error("Choose seeking or offering.");
-    const years = Number(input?.yearsClean);
-    const windowStart = Number(input?.windowStart);
-    return {
-      kind: kind as "seeking" | "offering",
-      cleanTime: String(input?.cleanTime ?? "").trim().slice(0, 40),
-      note: String(input?.note ?? "").trim().slice(0, 280),
-      yearsClean: Number.isInteger(years) ? years : null,
-      windowStart: Number.isInteger(windowStart) ? windowStart : null,
-      pledged: input?.pledged === true,
-    };
-  })
+  .validator(
+    (input: {
+      kind: string;
+      cleanTime: string;
+      note: string;
+      yearsClean?: number | null;
+      windowStart?: number | null;
+      pledged?: boolean;
+    }) => {
+      const kind =
+        input?.kind === "offering" ? "offering" : input?.kind === "seeking" ? "seeking" : "";
+      if (!kind) throw new Error("Choose seeking or offering.");
+      const years = Number(input?.yearsClean);
+      const windowStart = Number(input?.windowStart);
+      return {
+        kind: kind as "seeking" | "offering",
+        cleanTime: String(input?.cleanTime ?? "")
+          .trim()
+          .slice(0, 40),
+        note: String(input?.note ?? "")
+          .trim()
+          .slice(0, 280),
+        yearsClean: Number.isInteger(years) ? years : null,
+        windowStart: Number.isInteger(windowStart) ? windowStart : null,
+        pledged: input?.pledged === true,
+      };
+    },
+  )
   .handler(async ({ context, data }) => {
     const profile = await loadProfile(context.userId);
     if (!profile) return { ok: false as const, error: "Set up your name first." };
@@ -598,7 +638,10 @@ export const saveSponsor = createServerFn({ method: "POST" })
     let windowStart: number | null = null;
     if (data.kind === "offering") {
       if (!data.pledged) {
-        return { ok: false as const, error: "Confirm that you have 2 years clean and will keep this 12-hour window." };
+        return {
+          ok: false as const,
+          error: "Confirm that you have 2 years clean and will keep this 12-hour window.",
+        };
       }
       if (data.windowStart == null || data.windowStart < 0 || data.windowStart > 23) {
         return { ok: false as const, error: "Pick the 12-hour window you can keep each day." };
@@ -612,7 +655,8 @@ export const saveSponsor = createServerFn({ method: "POST" })
       if (!cleanRows[0] || actualYears < 2) {
         return {
           ok: false as const,
-          error: "Sponsor access needs at least 2 years clean. Add your clean date in the Journal first.",
+          error:
+            "Sponsor access needs at least 2 years clean. Add your clean date in the Journal first.",
         };
       }
       yearsClean = actualYears;
@@ -673,18 +717,30 @@ export const listSponsorChats = createServerFn({ method: "GET" })
 
 export const openSponsorChat = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { sponsorUserId: string }) => ({ sponsorUserId: String(input?.sponsorUserId ?? "") }))
+  .validator((input: { sponsorUserId: string }) => ({
+    sponsorUserId: String(input?.sponsorUserId ?? ""),
+  }))
   .handler(async ({ context, data }) => {
     if (!data.sponsorUserId) return { ok: false as const, error: "Choose a sponsor." };
-    if (data.sponsorUserId === context.userId) return { ok: false as const, error: "That is your own post." };
+    if (data.sponsorUserId === context.userId)
+      return { ok: false as const, error: "That is your own post." };
     const profile = await loadProfile(context.userId);
     if (!profile) return { ok: false as const, error: "Set up your name first." };
     const sql = await getSql();
-    const sponsors = await sql<{ kind: string; years_clean: number | null; window_start: number | null }>`
+    const sponsors = await sql<{
+      kind: string;
+      years_clean: number | null;
+      window_start: number | null;
+    }>`
       select kind, years_clean, window_start from sponsors where user_id = ${data.sponsorUserId}
     `;
     const sponsor = sponsors[0];
-    if (!sponsor || sponsor.kind !== "offering" || num(sponsor.years_clean) < 2 || sponsor.window_start == null) {
+    if (
+      !sponsor ||
+      sponsor.kind !== "offering" ||
+      num(sponsor.years_clean) < 2 ||
+      sponsor.window_start == null
+    ) {
       return { ok: false as const, error: "That person is not available as a sponsor." };
     }
     const existing = await sql<{ id: string }>`
@@ -803,22 +859,46 @@ export const heartbeat = createServerFn({ method: "POST" })
   .validator((input: { meetingId: string }) => ({ meetingId: String(input?.meetingId ?? "") }))
   .handler(async ({ context, data }) => {
     if (!data.meetingId) {
-      return { ok: false as const, state: "locked" as RoomState, message: "Missing room.", count: 0, capacity: 0 };
+      return {
+        ok: false as const,
+        state: "locked" as RoomState,
+        message: "Missing room.",
+        count: 0,
+        capacity: 0,
+      };
     }
     const room = await resolveRoom(context.userId, data.meetingId);
     if (room === "none") {
-      return { ok: false as const, state: "locked" as RoomState, message: "This room is not open to you.", count: 0, capacity: 0 };
+      return {
+        ok: false as const,
+        state: "locked" as RoomState,
+        message: "This room is not open to you.",
+        count: 0,
+        capacity: 0,
+      };
     }
     const profile = await loadProfile(context.userId);
     if (!profile) {
-      return { ok: false as const, state: "locked" as RoomState, message: "Set your first name first.", count: 0, capacity: 0 };
+      return {
+        ok: false as const,
+        state: "locked" as RoomState,
+        message: "Set your first name first.",
+        count: 0,
+        capacity: 0,
+      };
     }
     const sql = await getSql();
 
     if (room === "meeting") {
       const access = await meetingAccess(context.userId, data.meetingId);
       if (!access) {
-        return { ok: false as const, state: "ended" as RoomState, message: "This meeting is no longer on the board.", count: 0, capacity: ROOM_CAPACITY };
+        return {
+          ok: false as const,
+          state: "ended" as RoomState,
+          message: "This meeting is no longer on the board.",
+          count: 0,
+          capacity: ROOM_CAPACITY,
+        };
       }
       if (access.state !== "open") {
         return {
@@ -872,7 +952,13 @@ export const heartbeat = createServerFn({ method: "POST" })
       select count(*)::int as n from room_presence
       where meeting_id = ${data.meetingId} and last_seen > now() - interval '30 seconds'
     `;
-    return { ok: true as const, state: "open" as RoomState, message: "", count: num(counts[0]?.n), capacity: 2 };
+    return {
+      ok: true as const,
+      state: "open" as RoomState,
+      message: "",
+      count: num(counts[0]?.n),
+      capacity: 2,
+    };
   });
 
 export const leaveRoom = createServerFn({ method: "POST" })
@@ -935,7 +1021,9 @@ export const postMessage = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { meetingId: string; body: string }) => ({
     meetingId: String(input?.meetingId ?? ""),
-    body: String(input?.body ?? "").trim().slice(0, 500),
+    body: String(input?.body ?? "")
+      .trim()
+      .slice(0, 500),
   }))
   .handler(async ({ context, data }) => {
     if (!data.meetingId || !data.body) return { ok: false as const };
