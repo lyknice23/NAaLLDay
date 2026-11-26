@@ -1041,14 +1041,23 @@ export const postMessage = createServerFn({ method: "POST" })
 
 export const pollSignals = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .validator((input: { meetingId: string; after: string }) => ({
+  .validator((input: { meetingId: string; after: string; reset?: boolean }) => ({
     meetingId: String(input?.meetingId ?? ""),
     after: String(input?.after ?? ""),
+    reset: input?.reset === true,
   }))
   .handler(async ({ context, data }): Promise<RtcSignal[]> => {
     if (!(await roomWritable(context.userId, data.meetingId))) return [];
     const sql = await getSql();
     await sql`delete from rtc_signals where created_at < now() - interval '15 minutes'`;
+    // A new room page starts with an empty cursor. Clear the previous
+    // session's offers and ICE instead of replaying them into a new peer.
+    if (data.reset) {
+      await sql`
+        delete from rtc_signals
+        where meeting_id = ${data.meetingId} and to_id = ${context.userId}
+      `;
+    }
     const rows = await sql<{ id: string; from_id: string; payload: string }>`
       select id, from_id, payload from rtc_signals
       where meeting_id = ${data.meetingId}

@@ -19,7 +19,9 @@ import {
   type RoomState,
 } from "@/lib/meetings.functions";
 
-const ICE = [{ urls: "stun:stun.l.google.com:19302" }];
+const ICE = [
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] },
+];
 
 const GUIDE = [
   "Open with a moment of silence, then the Serenity Prayer in the we form.",
@@ -63,6 +65,7 @@ export function MeetingRoom({
   const localRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const pcs = useRef(new Map<string, RTCPeerConnection>());
+  const makingOffer = useRef(new Map<string, boolean>());
   const cursor = useRef("");
   const pendingIce = useRef(new Map<string, RTCIceCandidateInit[]>());
 
@@ -85,6 +88,7 @@ export function MeetingRoom({
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = media;
       if (localRef.current) localRef.current.srcObject = media;
+      for (const pc of pcs.current.values()) syncLocalTracks(pc);
       setMicOn(true);
       setCamOn(true);
       setStreamReady(true);
@@ -94,6 +98,7 @@ export function MeetingRoom({
         streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = audio;
         if (localRef.current) localRef.current.srcObject = audio;
+        for (const pc of pcs.current.values()) syncLocalTracks(pc);
         setMicOn(true);
         setCamOn(false);
         setStreamReady(true);
@@ -152,6 +157,8 @@ export function MeetingRoom({
       if (!live.has(id)) {
         pc.close();
         pcs.current.delete(id);
+        makingOffer.current.delete(id);
+        pendingIce.current.delete(id);
         setRemotes((current) => {
           const next = { ...current };
           delete next[id];
@@ -159,11 +166,9 @@ export function MeetingRoom({
         });
       }
     }
-    const stream = streamRef.current;
-    if (!stream) return;
+    if (!streamRef.current) return;
     for (const peer of others) {
-      if (selfId >= peer.userId || pcs.current.has(peer.userId)) continue;
-      void connect(peer.userId, true);
+      if (!pcs.current.has(peer.userId)) ensurePc(peer.userId);
     }
     // Re-run when the camera arrives or the set of peers changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,10 +176,14 @@ export function MeetingRoom({
 
   useEffect(() => {
     let stop = false;
+    let firstPull = true;
     async function pull() {
       if (stop) return;
       try {
-        const batch = await pollSignals({ data: { meetingId: meeting.id, after: cursor.current } });
+        const batch = await pollSignals({
+          data: { meetingId: meeting.id, after: cursor.current, reset: firstPull },
+        });
+        firstPull = false;
         for (const signal of batch) {
           cursor.current = signal.id;
           let payload: Payload;
@@ -183,7 +192,11 @@ export function MeetingRoom({
           } catch {
             continue;
           }
-          await accept(signal.fromId, payload);
+          try {
+            await accept(signal.fromId, payload);
+          } catch {
+            /* one bad signal must not stop the rest of the batch */
+          }
         }
       } catch {
         /* next tick */
@@ -199,12 +212,50 @@ export function MeetingRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meeting.id]);
 
+  /** Add camera/mic tracks that are not on the connection yet. */
+  function syncLocalTracks(pc: RTCPeerConnection) {
+    const stream = streamRef.current;
+    if (!stream) return;
+    for (const track of stream.getTracks()) {
+      if (pc.getSenders().some((sender) => sender.track === track)) continue;
+      const sameKind = pc.getSenders().find((sender) => sender.track?.kind === track.kind);
+      if (sameKind) void sameKind.replaceTrack(track);
+      else pc.addTrack(track, stream);
+    }
+  }
+
+  async function sendOffer(remoteId: string, pc: RTCPeerConnection) {
+    if (pc.signalingState !== "stable" || makingOffer.current.get(remoteId)) return;
+    makingOffer.current.set(remoteId, true);
+    try {
+      await pc.setLocalDescription();
+      const local = pc.localDescription;
+      if (!local || local.type !== "offer") return;
+      await postSignal({
+        data: {
+          meetingId: meeting.id,
+          toId: remoteId,
+          payload: JSON.stringify({
+            type: "offer",
+            sdp: { type: local.type, sdp: local.sdp },
+          } satisfies Payload),
+        },
+      });
+    } catch {
+      /* the browser retries on the next negotiationneeded event */
+    } finally {
+      makingOffer.current.set(remoteId, false);
+    }
+  }
+
   function ensurePc(remoteId: string) {
     const existing = pcs.current.get(remoteId);
     if (existing) return existing;
     const pc = new RTCPeerConnection({ iceServers: ICE });
-    const stream = streamRef.current;
-    stream?.getTracks().forEach((track) => pc.addTrack(track, stream));
+    makingOffer.current.set(remoteId, false);
+    pc.onnegotiationneeded = () => {
+      void sendOffer(remoteId, pc);
+    };
     pc.onicecandidate = (event) => {
       if (!event.candidate) return;
       void postSignal({
@@ -220,26 +271,8 @@ export function MeetingRoom({
       if (incoming) setRemotes((current) => ({ ...current, [remoteId]: incoming }));
     };
     pcs.current.set(remoteId, pc);
+    syncLocalTracks(pc);
     return pc;
-  }
-
-  async function connect(remoteId: string, offer: boolean) {
-    const pc = ensurePc(remoteId);
-    if (!offer || pc.signalingState !== "stable") return;
-    const description = await pc.createOffer();
-    await pc.setLocalDescription(description);
-    const local = pc.localDescription;
-    if (!local) return;
-    await postSignal({
-      data: {
-        meetingId: meeting.id,
-        toId: remoteId,
-        payload: JSON.stringify({
-          type: "offer",
-          sdp: { type: local.type, sdp: local.sdp },
-        } satisfies Payload),
-      },
-    });
   }
 
   async function flushIce(remoteId: string, pc: RTCPeerConnection) {
@@ -258,12 +291,21 @@ export function MeetingRoom({
     if (fromId === selfId) return;
     const pc = ensurePc(fromId);
     if (payload.type === "offer") {
-      await pc.setRemoteDescription(payload.sdp);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      // Perfect negotiation: the smaller id rolls back and accepts; the
+      // larger id keeps its own offer when the two offers cross.
+      const polite = selfId < fromId;
+      const collision =
+        makingOffer.current.get(fromId) === true || pc.signalingState !== "stable";
+      if (!polite && collision) return;
+      try {
+        await pc.setRemoteDescription(payload.sdp);
+      } catch {
+        return;
+      }
       await flushIce(fromId, pc);
+      await pc.setLocalDescription();
       const local = pc.localDescription;
-      if (!local) return;
+      if (!local || local.type !== "answer") return;
       await postSignal({
         data: {
           meetingId: meeting.id,
@@ -277,9 +319,12 @@ export function MeetingRoom({
       return;
     }
     if (payload.type === "answer") {
-      if (pc.signalingState === "have-local-offer") {
+      if (pc.signalingState !== "have-local-offer") return;
+      try {
         await pc.setRemoteDescription(payload.sdp);
         await flushIce(fromId, pc);
+      } catch {
+        /* the offer was superseded by a renegotiation */
       }
       return;
     }
@@ -292,7 +337,7 @@ export function MeetingRoom({
     try {
       await pc.addIceCandidate(payload.candidate);
     } catch {
-      /* duplicate */
+      /* candidate for a superseded offer */
     }
   }
 
