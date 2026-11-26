@@ -48,7 +48,11 @@ function PrivacyPage() {
           >
             www.alldayna.xyz
           </a>{" "}
-          and the services offered there.
+          and the services offered there. It should be read together with our{" "}
+          <Link to="/terms" className="text-primary underline-offset-4 hover:underline">
+            Terms of Service
+          </Link>
+          .
         </p>
         <p className="mt-3 leading-relaxed text-muted">
           ALL DAY NA is not a treatment provider, crisis service, or emergency line. If you are in
@@ -303,6 +307,9 @@ function PrivacyPage() {
         <footer className="mt-12 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-6 text-sm text-muted">
           <Link to="/" className="hover:text-fg">
             Meetings
+          </Link>
+          <Link to="/terms" className="hover:text-fg">
+            Terms of Service
           </Link>
           <Link to="/help" className="hover:text-fg">
             Find help

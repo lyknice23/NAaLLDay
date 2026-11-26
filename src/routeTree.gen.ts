@@ -18,6 +18,7 @@ import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SponsorsRouteImport } from './routes/sponsors'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as OnboardingProfileRouteImport } from './routes/onboarding/profile'
 import { Route as OnboardingRolesRouteImport } from './routes/onboarding/roles'
@@ -71,6 +72,11 @@ const SponsorsRoute = SponsorsRouteImport.update({
   path: '/sponsors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sponsors': typeof SponsorsRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/onboarding/profile': typeof OnboardingProfileRoute
   '/onboarding/roles': typeof OnboardingRolesRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sponsors': typeof SponsorsRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/onboarding/profile': typeof OnboardingProfileRoute
   '/onboarding/roles': typeof OnboardingRolesRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sponsors': typeof SponsorsRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/onboarding/profile': typeof OnboardingProfileRoute
   '/onboarding/roles': typeof OnboardingRolesRoute
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/reset-password'
     | '/sponsors'
+    | '/terms'
     | '/verify-email'
     | '/onboarding/profile'
     | '/onboarding/roles'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/reset-password'
     | '/sponsors'
+    | '/terms'
     | '/verify-email'
     | '/onboarding/profile'
     | '/onboarding/roles'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/reset-password'
     | '/sponsors'
+    | '/terms'
     | '/verify-email'
     | '/onboarding/profile'
     | '/onboarding/roles'
@@ -229,6 +241,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SponsorsRoute: typeof SponsorsRoute
+  TermsRoute: typeof TermsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   OnboardingProfileRoute: typeof OnboardingProfileRoute
   OnboardingRolesRoute: typeof OnboardingRolesRoute
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify-email': {
       id: '/verify-email'
       path: '/verify-email'
@@ -365,6 +385,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SponsorsRoute: SponsorsRoute,
+  TermsRoute: TermsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   OnboardingProfileRoute: OnboardingProfileRoute,
   OnboardingRolesRoute: OnboardingRolesRoute,

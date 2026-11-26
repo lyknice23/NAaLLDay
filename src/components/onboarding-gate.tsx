@@ -11,6 +11,7 @@ function isPublicPath(pathname: string): boolean {
     pathname === "/reset-password" ||
     pathname === "/help" ||
     pathname === "/privacy" ||
+    pathname === "/terms" ||
     pathname.startsWith("/onboarding/")
   );
 }

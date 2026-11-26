@@ -108,7 +108,11 @@ function TermsPage() {
         <span>I have read and agree to these terms of use.</span>
       </label>
       <p className="mt-3 text-sm leading-relaxed text-muted">
-        Read how we handle your information in our{" "}
+        Read the full{" "}
+        <Link to="/terms" className="text-primary underline-offset-4 hover:underline">
+          Terms of Service
+        </Link>{" "}
+        and how we handle your information in our{" "}
         <Link to="/privacy" className="text-primary underline-offset-4 hover:underline">
           Privacy Policy
         </Link>
