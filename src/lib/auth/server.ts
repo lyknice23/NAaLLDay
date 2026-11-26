@@ -81,6 +81,17 @@ const grokIssuer = env("GROK_AUTH_ISSUER") ?? GROK_ISSUER_DEFAULT;
 const grokClientId = env("GROK_AUTH_CLIENT_ID") ?? PREVIEW_CLIENT_ID;
 const grokClientSecret = env("GROK_AUTH_CLIENT_SECRET") ?? PREVIEW_CLIENT_SECRET;
 
+// Optional app-owned OAuth credentials. When BOTH providers are configured we
+// use direct social sign-in instead of the broker. This is required on custom
+// domains: the shared preview client only accepts *.grok-sandbox.com callbacks.
+const googleClientId = env("GOOGLE_CLIENT_ID");
+const googleClientSecret = env("GOOGLE_CLIENT_SECRET");
+const xClientId = env("X_CLIENT_ID") ?? env("TWITTER_CLIENT_ID");
+const xClientSecret = env("X_CLIENT_SECRET") ?? env("TWITTER_CLIENT_SECRET");
+const directOAuthConfigured = Boolean(
+  googleClientId && googleClientSecret && xClientId && xClientSecret,
+);
+
 /** True when federated sign-in is active (real auth is enforced). */
 export const authConfigured = !authDisabled && Boolean(grokClientId && grokClientSecret);
 
@@ -149,7 +160,37 @@ export const SESSION_TOKEN_COOKIE = "__Host-grok-auth.session_token";
 
 // Built separately so the `betterAuth({...})` call stays easy to edit without
 // breaking brackets (models often trip on the conditional plugin spread).
-const grokOAuthPlugin = authConfigured
+type XProfile = {
+  data: {
+    email?: string;
+    username: string;
+    name?: string;
+    profile_image_url?: string;
+  };
+};
+
+const directSocialProviders = directOAuthConfigured
+  ? {
+      google: {
+        clientId: googleClientId as string,
+        clientSecret: googleClientSecret as string,
+        prompt: "select_account" as const,
+      },
+      twitter: {
+        clientId: xClientId as string,
+        clientSecret: xClientSecret as string,
+        // X only returns an email when the app has email permission. Fall back
+        // to a stable synthetic address so the account can still be created.
+        mapProfileToUser: (profile: XProfile) => ({
+          email: profile.data.email ?? `${profile.data.username}@x.local`,
+          name: profile.data.name ?? profile.data.username,
+          image: profile.data.profile_image_url,
+        }),
+      },
+    }
+  : null;
+
+const grokOAuthPlugin = authConfigured && !directOAuthConfigured
   ? genericOAuth({
       config: GROK_PROVIDERS.map(({ providerId, idp }) => ({
         providerId,
@@ -178,6 +219,10 @@ export const auth = betterAuth({
   secret: env("BETTER_AUTH_SECRET") ?? previewAuthSecret(),
   database,
 
+  // App-owned Google/X OAuth on production custom domains. The broker plugin
+  // is skipped when these are present (see `grokOAuthPlugin`).
+  ...(directSocialProviders ? { socialProviders: directSocialProviders } : {}),
+
   // CSRF / origin check for credentialed auth POSTs (email sign-up/sign-in, …).
   // See `trustedOrigins` construction above — must cover live preview hosts AND
   // local loopback variants, or clients get "Invalid origin".
@@ -193,7 +238,12 @@ export const auth = betterAuth({
     encryptOAuthTokens: true,
     accountLinking: {
       enabled: true,
-      trustedProviders: [...GROK_PROVIDERS.map((p) => p.providerId), GATE_PROVIDER_ID],
+      trustedProviders: [
+        ...(directOAuthConfigured
+          ? ["google", "twitter"]
+          : GROK_PROVIDERS.map((p) => p.providerId)),
+        GATE_PROVIDER_ID,
+      ],
       // X's synthetic email is never "verified", so don't gate linking on the
       // local user's email-verified state.
       requireLocalEmailVerified: false,

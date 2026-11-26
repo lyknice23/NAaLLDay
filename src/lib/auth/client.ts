@@ -1,7 +1,7 @@
 import { genericOAuthClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { runPreSignInSignOut, runSignOut } from "../../../scripts/sign-out-plan.mjs";
-import { GROK_PROVIDERS } from "./providers";
+import { DIRECT_PROVIDERS, GROK_PROVIDERS, type AuthProvider } from "./providers";
 
 /**
  * Better Auth client for this React SPA (browser-side).
@@ -37,7 +37,18 @@ export const authClient = createAuthClient({
  */
 export const authEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
 
-/** The upstream providers to render sign-in buttons for. */
+/**
+ * The providers to render sign-in buttons for.
+ *
+ * `VITE_AUTH_MODE=direct` switches production to app-owned Google/X OAuth;
+ * otherwise the Grok broker (used by live preview) stays in charge.
+ */
+const directAuthMode = import.meta.env.VITE_AUTH_MODE === "direct";
+export const AUTH_PROVIDERS: readonly AuthProvider[] = directAuthMode
+  ? DIRECT_PROVIDERS
+  : GROK_PROVIDERS;
+
+/** Broker providers, kept for live-preview popup flows and compatibility. */
 export { GROK_PROVIDERS };
 
 // ── Live-preview bearer token ────────────────────────────────────────────────
@@ -96,8 +107,10 @@ function inLivePreview(): boolean {
 type PopupMessage = { source: "grok-auth-popup"; token: string | null; error?: string };
 
 /**
- * Start sign-in with one upstream provider (`providerId` from `GROK_PROVIDERS`),
- * federating through the Grok auth broker.
+ * Start sign-in with one provider from `AUTH_PROVIDERS`.
+ *
+ * Direct mode uses Better Auth's built-in social providers; broker mode
+ * federates through the Grok auth broker.
  *
  * - **Live preview** (`*.grok-sandbox.com` iframe): opens a POPUP to
  *   `/auth/popup`, served by the template Vite plugin (see `vite.config.ts` +
@@ -115,6 +128,13 @@ export async function signIn(
 ): Promise<void> {
   const callbackURL = opts.callbackURL ?? "/";
   const errorCallbackURL = opts.errorCallbackURL ?? "/";
+  const provider = AUTH_PROVIDERS.find((item) => item.providerId === providerId);
+
+  // Direct providers are only configured on the deployed origin. The live
+  // preview's partitioned-cookie popup flow is broker-only.
+  if (inLivePreview() && provider?.kind === "social") {
+    throw new Error("Direct social sign-in is only available on the deployed site.");
+  }
 
   // Open the popup SYNCHRONOUSLY on the user gesture — before any await
   // (including signOut). Awaiting first drops user-gesture privilege in some
@@ -153,6 +173,17 @@ export async function signIn(
         window.location.href = callbackURL;
       }
     }
+    return;
+  }
+
+  if (provider?.kind === "social") {
+    const { data, error } = await authClient.signIn.social({
+      provider: providerId,
+      callbackURL,
+      errorCallbackURL,
+    });
+    if (error) throw new Error(error.message ?? "Sign-in failed");
+    if (data?.url) window.location.href = data.url;
     return;
   }
 

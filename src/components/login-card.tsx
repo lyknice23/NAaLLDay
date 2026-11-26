@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { GROK_PROVIDERS, authClient, keepLocalSessionToken, signIn } from "@/lib/auth/client";
+import { AUTH_PROVIDERS, authClient, keepLocalSessionToken, signIn } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { onboardingPath } from "@/lib/onboarding";
 import { getOnboardingState, requestEmailCode } from "@/lib/onboarding.functions";
@@ -204,7 +204,7 @@ export function LoginCard() {
         <span className="h-px flex-1 bg-border" />
       </div>
       <div className="mt-4 flex flex-col gap-2">
-        {GROK_PROVIDERS.map((provider) => (
+        {AUTH_PROVIDERS.map((provider) => (
           <button
             key={provider.providerId}
             type="button"
