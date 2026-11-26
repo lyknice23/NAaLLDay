@@ -7,6 +7,8 @@ function isPublicPath(pathname: string): boolean {
   return (
     pathname === "/login" ||
     pathname === "/verify-email" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
     pathname === "/help" ||
     pathname.startsWith("/onboarding/")
   );
