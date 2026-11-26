@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { OnboardingLayout } from "@/components/onboarding-layout";
 import { CURRENT_TERMS_VERSION, onboardingPath } from "@/lib/onboarding";
 import { acceptTerms } from "@/lib/onboarding.functions";
@@ -107,6 +107,13 @@ function TermsPage() {
         />
         <span>I have read and agree to these terms of use.</span>
       </label>
+      <p className="mt-3 text-sm leading-relaxed text-muted">
+        Read how we handle your information in our{" "}
+        <Link to="/privacy" className="text-primary underline-offset-4 hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
       {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
       <button
         type="button"

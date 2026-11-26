@@ -15,6 +15,7 @@ import { Route as HelpRouteImport } from './routes/help'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SponsorsRouteImport } from './routes/sponsors'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
@@ -53,6 +54,11 @@ const LoginRoute = LoginRouteImport.update({
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sponsors': typeof SponsorsRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sponsors': typeof SponsorsRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sponsors': typeof SponsorsRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/notifications'
+    | '/privacy'
     | '/reset-password'
     | '/sponsors'
     | '/verify-email'
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/notifications'
+    | '/privacy'
     | '/reset-password'
     | '/sponsors'
     | '/verify-email'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/notifications'
+    | '/privacy'
     | '/reset-password'
     | '/sponsors'
     | '/verify-email'
@@ -214,6 +226,7 @@ export interface RootRouteChildren {
   JournalRoute: typeof JournalRoute
   LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SponsorsRoute: typeof SponsorsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
@@ -267,6 +280,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -342,6 +362,7 @@ const rootRouteChildren: RootRouteChildren = {
   JournalRoute: JournalRoute,
   LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
+  PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SponsorsRoute: SponsorsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
