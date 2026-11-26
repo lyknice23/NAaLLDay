@@ -86,8 +86,9 @@ const grokClientSecret = env("GROK_AUTH_CLIENT_SECRET") ?? PREVIEW_CLIENT_SECRET
 // domains: the shared preview client only accepts *.grok-sandbox.com callbacks.
 const googleClientId = env("GOOGLE_CLIENT_ID");
 const googleClientSecret = env("GOOGLE_CLIENT_SECRET");
-const xClientId = env("X_CLIENT_ID") ?? env("TWITTER_CLIENT_ID");
-const xClientSecret = env("X_CLIENT_SECRET") ?? env("TWITTER_CLIENT_SECRET");
+const xClientId = env("X_CLIENT_ID") ?? env("XClientID") ?? env("TWITTER_CLIENT_ID");
+const xClientSecret =
+  env("X_CLIENT_SECRET") ?? env("XClientSecret") ?? env("TWITTER_CLIENT_SECRET");
 const directOAuthConfigured = Boolean(
   googleClientId && googleClientSecret && xClientId && xClientSecret,
 );
