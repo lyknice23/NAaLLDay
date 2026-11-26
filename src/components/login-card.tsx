@@ -1,11 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  GROK_PROVIDERS,
-  authClient,
-  keepLocalSessionToken,
-  signIn,
-} from "@/lib/auth/client";
+import { GROK_PROVIDERS, authClient, keepLocalSessionToken, signIn } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { onboardingPath } from "@/lib/onboarding";
 import { getOnboardingState, requestEmailCode } from "@/lib/onboarding.functions";
@@ -58,7 +53,9 @@ export function LoginCard() {
           password,
         });
         if (signInError) {
-          throw new Error(signInError.message ?? "Could not sign you in after creating the account.");
+          throw new Error(
+            signInError.message ?? "Could not sign you in after creating the account.",
+          );
         }
         keepLocalSessionToken(signInData?.token ?? null);
         const session = await authClient.getSession();
@@ -97,12 +94,9 @@ export function LoginCard() {
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
       <p className="text-sm font-medium tracking-wide text-primary">ALL DAY NA</p>
-      <h1 className="mt-3 font-display text-4xl leading-tight text-fg">
-        Meetings that stay open.
-      </h1>
+      <h1 className="mt-3 font-display text-4xl leading-tight text-fg">Meetings that stay open.</h1>
       <p className="mt-4 text-lg leading-relaxed text-muted">
-        Create an account with your email, or sign back in. First names only
-        inside the rooms.
+        Create an account with your email, or sign back in. First names only inside the rooms.
       </p>
 
       {user ? (
@@ -157,6 +151,16 @@ export function LoginCard() {
             className="mt-1 h-12 w-full rounded-lg border border-border bg-surface px-3 text-fg"
           />
         </label>
+        {mode === "signin" ? (
+          <div className="text-right">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-primary underline-offset-4 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+        ) : null}
         {mode === "signup" ? (
           <label className="block text-sm text-muted">
             Confirm password
@@ -189,8 +193,8 @@ export function LoginCard() {
 
       {mode === "signup" ? (
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          We’ll email you a 6-digit code. Next you’ll review the terms, choose a
-          name, and tell us how you want to take part.
+          We’ll email you a 6-digit code. Next you’ll review the terms, choose a name, and tell us
+          how you want to take part.
         </p>
       ) : null}
 
@@ -210,9 +214,7 @@ export function LoginCard() {
               setProviderPending(provider.providerId);
               void signIn(provider.providerId, { callbackURL: "/" })
                 .catch((err: unknown) => {
-                  setError(
-                    err instanceof Error ? err.message : "Sign-in failed. Try again.",
-                  );
+                  setError(err instanceof Error ? err.message : "Sign-in failed. Try again.");
                 })
                 .finally(() => setProviderPending(null));
             }}
@@ -225,15 +227,12 @@ export function LoginCard() {
         ))}
       </div>
 
-      <Link
-        to="/help"
-        className="mt-6 text-sm text-primary underline-offset-4 hover:underline"
-      >
+      <Link to="/help" className="mt-6 text-sm text-primary underline-offset-4 hover:underline">
         Need treatment now? Find a rehab with SAMHSA
       </Link>
       <p className="mt-8 text-sm leading-relaxed text-muted">
-        Independent tool for people who want Narcotics Anonymous style meetings
-        online. Not affiliated with Narcotics Anonymous World Services.
+        Independent tool for people who want Narcotics Anonymous style meetings online. Not
+        affiliated with Narcotics Anonymous World Services.
       </p>
     </main>
   );
