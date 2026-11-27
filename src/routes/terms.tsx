@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ROOM_CAPACITY } from "@/lib/room-access";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/terms")({
   component: TermsOfServicePage,
 });
 
-const LAST_UPDATED = "November 26, 2026";
+const LAST_UPDATED = "November 27, 2026";
 const CONTACT_EMAIL = "support@alldayna.xyz";
 
 function TermsOfServicePage() {
@@ -90,14 +91,15 @@ function TermsOfServicePage() {
           <Section title="3. The service">
             <p>
               ALL DAY NA lets people schedule and attend peer-led online meetings, join video rooms,
-              keep a private clean-day journal, share milestones, and connect with sponsors. Meetings
-              are led by volunteers and are not moderated by professional clinicians. We do not
+              keep a private clean-day journal, share clean time and milestones, comment on sponsor
+              posts, and connect with sponsors in a private video and chat room. Meetings are led by
+              volunteers and are not moderated by professional clinicians. We do not
               verify the identity, recovery, qualifications, or intentions of anyone using the
               service.
             </p>
             <p>
-              Meetings are generally one hour long, rooms hold up to 50 people, and joining closes 20
-              minutes after the scheduled start. Leaders may open their own room after that point.
+              Meetings are generally one hour long, rooms hold up to {ROOM_CAPACITY} people, and joining
+              closes 20 minutes after the scheduled start. Leaders may open their own room after that point.
               After their first week, leaders are expected to guide at least three meetings per week;
               failing to do so may suspend leader access. Suspended leaders may still attend
               meetings.
@@ -154,9 +156,9 @@ function TermsOfServicePage() {
               not represent our views.
             </p>
             <p>
-              Camera and microphone access is off until you enable it. Audio and video travel
-              directly between participants using WebRTC and are not recorded by ALL DAY NA. Other
-              participants may still be able to see, hear, or copy what you share. Use good judgment
+              Camera and microphone access is off until you enable it. Audio and video are relayed
+              through LiveKit Cloud and are not recorded by ALL DAY NA. Other participants may still
+              be able to see, hear, or copy what you share. Use good judgment
               about what you disclose, and do not join a room if you are not comfortable with the
               people in it.
             </p>
@@ -166,10 +168,34 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="7. Sponsors and recovery information">
+          <Section title="7. Attendance records and verification letters">
             <p>
-              Sponsor availability, clean time, and recovery details are self-reported. We do not
-              verify them. A sponsor is a peer, not a clinician, and is not acting on our behalf.
+              We keep a record when you join a meeting room, including the meeting, when you first
+              joined, your latest recorded presence, and the total time you were present. This is a
+              platform record, not an independent identity, recovery, or attendance verification.
+              It may not include time when your connection was lost, your tab was closed, or you
+              stepped away.
+            </p>
+            <p>
+              After a meeting ends, you can ask us to email an attendance verification letter to the
+              email address on your account. The letter is generated from the recorded attendance
+              and includes the meeting details and approximate duration. We may decline, limit, or
+              review requests that appear automated, fraudulent, or inconsistent with our records.
+            </p>
+            <p>
+              The letter is a record of platform attendance only. It is not a court order, parole
+              document, clinical record, or guarantee that a court, parole officer, treatment
+              provider, or any other agency will accept it. We do not verify your identity or
+              recovery status. You are responsible for confirming whether a recipient will accept
+              the letter.
+            </p>
+          </Section>
+
+          <Section title="8. Sponsors and recovery information">
+            <p>
+              Sponsor availability, clean time, comments, and recovery details are self-reported. We
+              do not verify them. A sponsor is a peer, not a clinician, and is not acting on our
+              behalf.
               Use your own judgment before connecting with someone, and never rely on a sponsor for
               medical or emergency care.
             </p>
@@ -180,7 +206,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="8. Your content">
+          <Section title="9. Your content">
             <p>
               You keep ownership of the content you create, including meeting descriptions, chat
               messages, journal notes, sponsor posts, and shared achievements. You give ALL DAY NA a
@@ -201,7 +227,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="9. Acceptable use">
+          <Section title="10. Acceptable use">
             <p>You agree not to:</p>
             <ul className="list-disc space-y-2 pl-5">
               <li>use the service for illegal activity or to harm another person;</li>
@@ -219,7 +245,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="10. Privacy">
+          <Section title="11. Privacy">
             <p>
               Our{" "}
               <Link to="/privacy" className="text-primary underline-offset-4 hover:underline">
@@ -230,17 +256,17 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="11. Third-party services">
+          <Section title="12. Third-party services">
             <p>
-              We use service providers such as Vercel for hosting, Neon for our database, Resend for
-              email, and Google Fonts for fonts. If you sign in with Google or X, that provider’s
+              We use service providers such as Vercel for hosting, Neon for our database, LiveKit
+              Cloud for audio and video, Resend for email, and Google Fonts for fonts. If you sign in with Google or X, that provider’s
               terms and privacy policy also apply to the sign-in. We are not responsible for
               third-party websites or services, including the SAMHSA locator or partner offers linked
               from the app.
             </p>
           </Section>
 
-          <Section title="12. Suspension and termination">
+          <Section title="13. Suspension and termination">
             <p>
               You may stop using ALL DAY NA at any time. We may suspend or terminate your access if
               you violate these Terms, if your account creates risk for other users, or if we are
@@ -254,7 +280,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="13. Disclaimers">
+          <Section title="14. Disclaimers">
             <p>
               ALL DAY NA is provided “as is” and “as available.” To the fullest extent permitted by
               law, we disclaim all warranties, express or implied, including warranties of
@@ -269,7 +295,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="14. Limitation of liability">
+          <Section title="15. Limitation of liability">
             <p>
               To the fullest extent permitted by law, ALL DAY NA and the people who operate it will
               not be liable for indirect, incidental, special, consequential, or punitive damages,
@@ -284,7 +310,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="15. Indemnity">
+          <Section title="16. Indemnity">
             <p>
               To the extent permitted by law, you agree to indemnify and hold harmless ALL DAY NA and
               the people who operate it from claims, losses, liabilities, and expenses (including
@@ -293,7 +319,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="16. Intellectual property">
+          <Section title="17. Intellectual property">
             <p>
               The ALL DAY NA name, design, software, and original content are owned by or licensed to
               us and are protected by intellectual-property laws. These Terms do not give you
@@ -314,7 +340,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="17. Changes to these Terms">
+          <Section title="18. Changes to these Terms">
             <p>
               We may update these Terms as the service changes. The date at the top shows the latest
               version. If a change is material, we will provide a clear notice in the app or by email
@@ -323,7 +349,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="18. General">
+          <Section title="19. General">
             <p>
               If any part of these Terms is found unenforceable, the rest will remain in effect. Our
               failure to enforce a provision is not a waiver. You may not assign your rights under
@@ -338,7 +364,7 @@ function TermsOfServicePage() {
             </p>
           </Section>
 
-          <Section title="19. Contact">
+          <Section title="20. Contact">
             <p>
               Questions about these Terms or the service can be sent to{" "}
               <a

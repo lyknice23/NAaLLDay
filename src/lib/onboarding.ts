@@ -1,7 +1,8 @@
 /** Client-safe onboarding constants, types, and the pure step resolver. */
 
-/** Bump this whenever the terms text changes; users must re-accept the new version. */
-export const CURRENT_TERMS_VERSION = "2026-11-11";
+/** Bump these whenever the policy text changes; users must re-accept that policy. */
+export const CURRENT_TERMS_VERSION = "2026-11-27";
+export const CURRENT_PRIVACY_VERSION = "2026-11-27";
 
 export const SPONSOR_MIN_YEARS = 2;
 
@@ -27,6 +28,8 @@ export type OnboardingState = {
   emailVerified: boolean;
   termsAccepted: boolean;
   termsVersion: string;
+  privacyAccepted: boolean;
+  privacyVersion: string;
   profile: OnboardingProfile | null;
   step: OnboardingStep;
 };
@@ -45,11 +48,12 @@ export function onboardingPath(step: OnboardingStep): string {
 export function resolveOnboardingStep(input: {
   emailVerified: boolean;
   termsAccepted: boolean;
+  privacyAccepted: boolean;
   hasProfile: boolean;
   onboardingCompleted: boolean;
 }): OnboardingStep {
   if (!input.emailVerified) return "verify-email";
-  if (!input.termsAccepted) return "terms";
+  if (!input.termsAccepted || !input.privacyAccepted) return "terms";
   if (!input.hasProfile) return "profile";
   if (!input.onboardingCompleted) return "roles";
   return "complete";

@@ -193,8 +193,8 @@ export function LoginCard() {
 
       {mode === "signup" ? (
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          We’ll email you a 6-digit code. Next you’ll review the terms, choose a name, and tell us
-          how you want to take part.
+          We’ll email you a 6-digit code. Next you’ll review the terms and privacy policy, choose a
+          name, and tell us how you want to take part.
         </p>
       ) : null}
 

@@ -128,7 +128,7 @@ function RolesPage() {
           title="Sponsor"
           detail={
             canSponsor
-              ? "Be available for private video conversations during a 12-hour daily window. Requires at least 2 years clean."
+              ? "Be available for private video or chat during a 12-hour daily window. Requires at least 2 years clean."
               : "Sponsor access needs at least 2 years clean. You can still attend or lead, and add a clean date in your journal later."
           }
           onClick={() => setWantsSponsor((value) => !value)}

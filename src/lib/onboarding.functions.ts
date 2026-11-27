@@ -4,6 +4,7 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { getSql } from "@/lib/db";
 import { sendVerificationEmail } from "@/lib/email.server";
 import {
+  CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
   resolveOnboardingStep,
   type OnboardingState,
@@ -57,16 +58,20 @@ async function loadOnboardingState(userId: string): Promise<OnboardingState> {
     left join clean_journals cj on cj.user_id = p.user_id
     where p.user_id = ${userId}
   `;
-  const consentRows = await sql<{ accepted: boolean }>`
-    select exists (
-      select 1 from user_consents
-      where user_id = ${userId} and terms_version = ${CURRENT_TERMS_VERSION}
-    ) as accepted
+  const consentRows = await sql<{
+    terms_accepted: boolean;
+    privacy_accepted: boolean;
+  }>`
+    select coalesce(terms_version = ${CURRENT_TERMS_VERSION}, false) as terms_accepted,
+           coalesce(privacy_version = ${CURRENT_PRIVACY_VERSION}, false) as privacy_accepted
+    from user_consents
+    where user_id = ${userId}
   `;
 
   const row = profileRows[0];
   const emailVerified = user ? Boolean(user.email_verified || user.oauth) : true;
-  const termsAccepted = Boolean(consentRows[0]?.accepted);
+  const termsAccepted = Boolean(consentRows[0]?.terms_accepted);
+  const privacyAccepted = Boolean(consentRows[0]?.privacy_accepted);
   const profile = row
     ? {
         displayName: row.display_name,
@@ -84,10 +89,13 @@ async function loadOnboardingState(userId: string): Promise<OnboardingState> {
     emailVerified,
     termsAccepted,
     termsVersion: CURRENT_TERMS_VERSION,
+    privacyAccepted,
+    privacyVersion: CURRENT_PRIVACY_VERSION,
     profile,
     step: resolveOnboardingStep({
       emailVerified,
       termsAccepted,
+      privacyAccepted,
       hasProfile: Boolean(profile),
       onboardingCompleted: Boolean(profile?.completedAt),
     }),
@@ -245,14 +253,33 @@ export const verifyEmailCode = createServerFn({ method: "POST" })
 
 export const acceptTerms = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .handler(async ({ context }) => {
+  .validator((input: { terms?: boolean; privacy?: boolean }) => ({
+    terms: input?.terms === true,
+    privacy: input?.privacy === true,
+  }))
+  .handler(async ({ context, data }) => {
+    if (!data.terms || !data.privacy) {
+      return {
+        ok: false as const,
+        error: "You must accept both the Terms of Service and the Privacy Policy.",
+      };
+    }
     const sql = await getSql();
     await sql`
-      insert into user_consents (user_id, terms_version, accepted_at)
-      values (${context.userId}, ${CURRENT_TERMS_VERSION}, now())
+      insert into user_consents
+        (user_id, terms_version, accepted_at, privacy_version, privacy_accepted_at)
+      values (
+        ${context.userId},
+        ${CURRENT_TERMS_VERSION},
+        now(),
+        ${CURRENT_PRIVACY_VERSION},
+        now()
+      )
       on conflict (user_id) do update set
         terms_version = excluded.terms_version,
-        accepted_at = now()
+        accepted_at = now(),
+        privacy_version = excluded.privacy_version,
+        privacy_accepted_at = now()
     `;
     return {
       ok: true as const,

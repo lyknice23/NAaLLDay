@@ -10,6 +10,7 @@ test("onboarding resolves each gate in order", () => {
   const complete = {
     emailVerified: true,
     termsAccepted: true,
+    privacyAccepted: true,
     hasProfile: true,
     onboardingCompleted: true,
   };
@@ -20,6 +21,10 @@ test("onboarding resolves each gate in order", () => {
   );
   assert.equal(
     resolveOnboardingStep({ ...complete, termsAccepted: false }),
+    "terms",
+  );
+  assert.equal(
+    resolveOnboardingStep({ ...complete, privacyAccepted: false }),
     "terms",
   );
   assert.equal(resolveOnboardingStep({ ...complete, hasProfile: false }), "profile");

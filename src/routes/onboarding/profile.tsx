@@ -106,8 +106,9 @@ function ProfilePage() {
         <div className="rounded-lg border border-border bg-surface p-4">
           <p className="text-sm font-medium text-fg">Clean time</p>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            This is optional. It helps us show the right support options. You
-            can change it later in your journal.
+            This is optional. It helps us show the right support options. It
+            stays private unless you choose to share it later on the Community
+            board. You can change it in your journal.
           </p>
           <label className="mt-4 flex items-start gap-3 text-sm text-fg">
             <input

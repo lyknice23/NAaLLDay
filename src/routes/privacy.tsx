@@ -14,7 +14,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const LAST_UPDATED = "November 26, 2026";
+const LAST_UPDATED = "November 27, 2026";
 const CONTACT_EMAIL = "support@alldayna.xyz";
 
 function PrivacyPage() {
@@ -67,33 +67,45 @@ function PrivacyPage() {
               create an account, we collect your email address and a password. Passwords are stored
               only as a one-way hash. If you sign in with Google or X, we receive your account ID,
               email address, name, and profile image from that provider. We also store your email
-              verification status, sessions, and the date you accepted our terms.
+              verification status, sessions, the dates you accepted our Terms of Service and Privacy
+              Policy, and records of attendance-verification letters you request.
             </p>
             <p>
               <strong className="text-fg">Profile and recovery information.</strong> You choose a
               display name, a role (leader or attendee), and whether you want to be listed as a
               sponsor. If you use the journal, we store your clean date, the days you mark, and any
               notes you write. If you post on the sponsor board, we store the clean time you share,
-              your availability window, and your note. If you share a milestone, we store the
+              your availability window, your note, and comments people leave on your post. If you
+              turn on Community sharing, your first name and clean time are shown to other signed-in
+              members; you can turn that off at any time. If you share a milestone, we store the
               milestone and the note you choose to share.
             </p>
             <p>
               <strong className="text-fg">Meetings, rooms, and sponsor connections.</strong> We
-              store meetings you create, meeting signups, room joins and presence, chat messages,
-              sponsor connections, and related timestamps. To connect audio and video between
-              participants, we temporarily store WebRTC signaling data (session descriptions and
-              network candidates). We do not record or store the audio or video itself.
+              store meetings you create, meeting signups, room joins and presence, attendance
+              records, chat messages, sponsor connections, and related timestamps. Attendance records
+              include the meeting, when you first joined, your latest recorded presence, when you left,
+              and the total time you were present. To connect audio and video between participants, we
+              use LiveKit Cloud as our media relay. LiveKit processes connection metadata such as IP
+              addresses to route the call. We do not record or store the audio or video itself.
+            </p>
+            <p>
+              <strong className="text-fg">Attendance verification requests.</strong> When you ask us
+              to email a verification letter, we store the meeting, your account email address, the
+              generated letter, the request date, and whether delivery succeeded. The letter is based
+              on your platform attendance record and is sent through Resend to the email address on
+              your account.
             </p>
             <p>
               <strong className="text-fg">Camera and microphone.</strong> Camera and microphone
-              access is off until you turn it on. When enabled, your audio and video are sent to the
-              other people in that room so they can see and hear you. They are not recorded by ALL
-              DAY NA.
+              access is off until you turn it on. When enabled, your audio and video are relayed
+              through LiveKit Cloud to the other people in that room so they can see and hear you.
+              They are not recorded by ALL DAY NA.
             </p>
             <p>
               <strong className="text-fg">Communications and technical information.</strong> We
-              store the emails we send you for verification and password reset, and any messages you
-              send to support. Like most websites, we receive technical information such as your IP
+              store the emails we send you for verification, password reset, and attendance
+              verification, and any messages you send to support. Like most websites, we receive technical information such as your IP
               address, browser and device type, pages requested, and timestamps. We use essential
               cookies and browser storage to keep you signed in and to operate the app.
             </p>
@@ -110,8 +122,9 @@ function PrivacyPage() {
             <ul className="list-disc space-y-2 pl-5">
               <li>create and secure your account, verify your email, and reset your password;</li>
               <li>run meetings, presence, chat, sponsor connections, and video rooms;</li>
+              <li>record attendance and generate the verification letters you request;</li>
               <li>maintain your journal, milestones, reminders, and notifications;</li>
-              <li>show the display name, role, sponsor post, and shared achievement you choose to publish;</li>
+              <li>show the display name, role, sponsor post, shared clean time, and shared achievement you choose to publish;</li>
               <li>enforce our terms, prevent abuse, and keep the service safe;</li>
               <li>respond to support requests, troubleshoot problems, and improve the service; and</li>
               <li>comply with applicable law and protect the rights and safety of our users.</li>
@@ -125,22 +138,26 @@ function PrivacyPage() {
 
           <Section title="3. What other people can see">
             <p>
-              Your display name, role, sponsor status, meetings you create, sponsor posts, and
-              milestones you choose to share are visible to other signed-in users. Room chat and
-              presence are visible to people in that room. Sponsor connections and their video rooms
-              are limited to the two people in the connection.
+              Your display name, role, sponsor status, meetings you create, sponsor posts, sponsor
+              comments, and milestones you choose to share are visible to other signed-in users. If
+              you turn on Community sharing, your first name and how long you have been clean are
+              also visible there. Room chat and presence are visible to people in that room.
+              Sponsor connections and their video and chat rooms are limited to the two people in the
+              connection. Your attendance history and verification requests are private to your
+              account, except for the letter you ask us to email to your account address.
             </p>
             <p>
-              Your journal notes and clean date are private to your account, except for a milestone
-              and note you deliberately share to the community board. Even then, only the milestone
-              and note you choose are shown, not your journal entries.
+              Your journal notes and exact clean date are private to your account. The exceptions
+              are content you deliberately publish: a milestone and note you share, or your first
+              name and clean time when you turn on Community sharing. Even then, your journal entries
+              and exact clean date are not shown. You can turn Community sharing off whenever you
+              want.
             </p>
             <p>
-              <strong className="text-fg">Peer-to-peer connections.</strong> Audio, video, and data
-              in a room travel directly between participants using WebRTC. As part of that
-              connection, other participants may receive your IP address, depending on your network
-              and browser. We do not control what other participants do with information you share
-              in a room.
+              <strong className="text-fg">Media relay.</strong> Audio and video in a room are sent
+              through LiveKit Cloud, our WebRTC media relay. LiveKit processes connection metadata
+              such as IP addresses to route the call; we do not record or store the audio or video.
+              We do not control what other participants do with information you share in a room.
             </p>
             <p>
               Please do not post another person’s private information, and do not record or
@@ -161,8 +178,12 @@ function PrivacyPage() {
                 <strong className="text-fg">Neon</strong> hosts our PostgreSQL database.
               </li>
               <li>
-                <strong className="text-fg">Resend</strong> delivers verification and password-reset
-                emails.
+                <strong className="text-fg">LiveKit Cloud</strong> relays audio and video for
+                meetings and private rooms.
+              </li>
+              <li>
+                <strong className="text-fg">Resend</strong> delivers verification, password-reset,
+                and attendance-verification emails.
               </li>
               <li>
                 <strong className="text-fg">Google Fonts</strong> serves the fonts used on the site,
@@ -208,7 +229,10 @@ function PrivacyPage() {
               temporary and is deleted after a short period. Verification codes expire after 10
               minutes, and password-reset links expire after one hour. Presence information becomes
               stale within about 30 seconds, though a presence record may remain until it is
-              cleaned up or you leave the room.
+              cleaned up or you leave the room. Attendance records and verification-request records
+              are kept while your account is active or as needed to provide the service, resolve
+              disputes, or meet legal obligations. A copy of a letter may remain in your email
+              provider, in our email delivery records, or with anyone you forward it to.
             </p>
             <p>
               If you delete content or ask us to delete your account, we will remove it from the
@@ -233,7 +257,9 @@ function PrivacyPage() {
             <p>
               You can review and change your profile and journal information in the app. You can
               delete journal entries, sponsor posts, and shared milestones through the relevant
-              screens. You can turn camera and microphone access off at any time.
+              screens. You can turn camera and microphone access off at any time. You can request a
+              copy of an attendance letter for any eligible meeting from your homepage; contact us if
+              you need help with an attendance record or a letter that was already sent.
             </p>
             <p>
               To request access to, correction of, export of, or deletion of your personal

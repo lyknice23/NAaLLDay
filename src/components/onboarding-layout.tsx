@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-const STEPS = ["Terms", "About you", "Roles"] as const;
+const STEPS = ["Policies", "About you", "Roles"] as const;
 
 export function OnboardingLayout({
   step,
