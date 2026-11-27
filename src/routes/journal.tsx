@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { LoginCard } from "@/components/login-card";
 import { AppHeader } from "@/components/app-header";
@@ -10,6 +10,7 @@ import {
   listShared,
   saveDay,
   setCleanDate,
+  setCleanTimeVisibility,
   shareAchievement,
   type JournalEntry,
   type JournalState,
@@ -29,6 +30,7 @@ function JournalPage() {
   const [draft, setDraft] = useState("");
   const [shareNotes, setShareNotes] = useState<Record<number, string>>({});
   const [editingDate, setEditingDate] = useState(false);
+  const [sharePending, setSharePending] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -209,6 +211,38 @@ function JournalPage() {
                   <span className="ml-2 text-2xl text-muted">{journal.daysClean === 1 ? "day" : "days"}</span>
                 </p>
                 <p className="mt-1 text-sm text-muted">Since {journal.cleanSince}</p>
+                <label className="mt-4 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-fg">
+                  <input
+                    type="checkbox"
+                    checked={journal.sharedCleanTime}
+                    disabled={sharePending}
+                    onChange={(event) => {
+                      const shared = event.target.checked;
+                      setSharePending(true);
+                      setError("");
+                      void setCleanTimeVisibility({ data: { shared } })
+                        .then((result) => {
+                          if (!result.ok) setError(result.error);
+                          else setJournal(result.journal);
+                        })
+                        .catch((err: unknown) =>
+                          setError(err instanceof Error ? err.message : "Could not change sharing."),
+                        )
+                        .finally(() => setSharePending(false));
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium">Show my clean time on the Community board</span>
+                    <span className="mt-1 block text-muted">
+                      Other signed-in members will see your first name and how long you have been
+                      clean. Your journal notes stay private.{" "}
+                      <Link to="/community" className="text-primary underline-offset-4 hover:underline">
+                        See the board
+                      </Link>
+                    </span>
+                  </span>
+                </label>
                 <button
                   type="button"
                   onClick={() => setEditingDate(true)}

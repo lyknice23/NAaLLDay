@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CommunityRouteImport } from './routes/community'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as JournalRouteImport } from './routes/journal'
@@ -30,6 +31,11 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityRoute = CommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -115,6 +121,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/community': typeof CommunityRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/help': typeof HelpRoute
   '/journal': typeof JournalRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/community': typeof CommunityRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/help': typeof HelpRoute
   '/journal': typeof JournalRoute
@@ -154,6 +162,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/community': typeof CommunityRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/help': typeof HelpRoute
   '/journal': typeof JournalRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/community'
     | '/forgot-password'
     | '/help'
     | '/journal'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/community'
     | '/forgot-password'
     | '/help'
     | '/journal'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/community'
     | '/forgot-password'
     | '/help'
     | '/journal'
@@ -233,6 +245,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CommunityRoute: typeof CommunityRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HelpRoute: typeof HelpRoute
   JournalRoute: typeof JournalRoute
@@ -258,6 +271,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community': {
+      id: '/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof CommunityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -377,6 +397,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CommunityRoute: CommunityRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   HelpRoute: HelpRoute,
   JournalRoute: JournalRoute,

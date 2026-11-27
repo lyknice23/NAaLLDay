@@ -18,9 +18,17 @@ export type SharedAchievement = {
   mine: boolean;
 };
 
+export type CommunityCleanTime = {
+  userId: string;
+  displayName: string;
+  cleanDays: number;
+  mine: boolean;
+};
+
 export type JournalState = {
   cleanSince: string | null;
   daysClean: number;
+  sharedCleanTime: boolean;
   today: string;
   /** The month these entries belong to, as YYYY-MM. */
   month: string;
@@ -44,8 +52,10 @@ async function loadJournal(userId: string, month?: string): Promise<JournalState
   `;
   const fallbackMonth = todayRows[0]?.month ? `${todayRows[0].month}-01` : "";
   const requested = validMonth(month) ?? fallbackMonth;
-  const rows = await sql<{ clean_since: string; days: number }>`
-    select clean_since::text as clean_since, (current_date - clean_since)::int as days
+  const rows = await sql<{ clean_since: string; days: number; shared: boolean }>`
+    select clean_since::text as clean_since,
+           (current_date - clean_since)::int as days,
+           shared
     from clean_journals
     where user_id = ${userId}
   `;
@@ -65,6 +75,7 @@ async function loadJournal(userId: string, month?: string): Promise<JournalState
   return {
     cleanSince: rows[0]?.clean_since ?? null,
     daysClean: rows[0] ? num(rows[0].days) : 0,
+    sharedCleanTime: Boolean(rows[0]?.shared),
     today: todayRows[0]?.today ?? "",
     month: requested ? requested.slice(0, 7) : "",
     entries: entries.map((row) => ({
@@ -106,6 +117,53 @@ export const setCleanDate = createServerFn({ method: "POST" })
         and milestone_days > (select (current_date - clean_since) from clean_journals where user_id = ${context.userId})
     `;
     return { ok: true as const, journal: await loadJournal(context.userId) };
+  });
+
+export const setCleanTimeVisibility = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { shared?: boolean }) => ({ shared: input?.shared === true }))
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const rows = await sql<{ user_id: string }>`
+      update clean_journals
+      set shared = ${data.shared}, updated_at = now()
+      where user_id = ${context.userId}
+      returning user_id
+    `;
+    if (!rows[0]) {
+      return {
+        ok: false as const,
+        error: "Add a clean date before sharing your clean time.",
+      };
+    }
+    return { ok: true as const, journal: await loadJournal(context.userId) };
+  });
+
+/** The opt-in Community board: display names and clean time only, never notes. */
+export const listCommunityCleanTimes = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<CommunityCleanTime[]> => {
+    const sql = await getSql();
+    const rows = await sql<{
+      user_id: string;
+      display_name: string;
+      clean_days: number;
+    }>`
+      select cj.user_id,
+             p.display_name,
+             (current_date - cj.clean_since)::int as clean_days
+      from clean_journals cj
+      join profiles p on p.user_id = cj.user_id
+      where cj.shared = true
+      order by p.display_name asc
+      limit 200
+    `;
+    return rows.map((row) => ({
+      userId: row.user_id,
+      displayName: row.display_name,
+      cleanDays: num(row.clean_days),
+      mine: row.user_id === context.userId,
+    }));
   });
 
 /** Mark any day from the clean date through today, with an optional note. */

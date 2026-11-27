@@ -14,6 +14,21 @@ export function windowLabel(start: number | null | undefined) {
   return SPONSOR_WINDOWS[start]?.label ?? "";
 }
 
+/** Shared summary for a sponsor connection, or a neutral fallback. */
+export function connectionSummary(
+  yearsClean: number | null | undefined,
+  windowStart: number | null | undefined,
+) {
+  return (
+    [
+      yearsClean == null ? null : `${yearsClean} years clean`,
+      windowStart == null ? null : `available ${windowLabel(windowStart)}`,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Private connection"
+  );
+}
+
 /** Whether the sponsor's 12-hour window is open at the given local hour. */
 export function windowIsOpen(start: number | null | undefined, hour: number) {
   if (start == null || start < 0 || start > 23) return false;

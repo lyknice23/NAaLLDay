@@ -50,6 +50,14 @@ export type SponsorPost = {
   note: string;
   yearsClean: number | null;
   windowStart: number | null;
+  commentCount: number;
+  mine: boolean;
+};
+
+export type SponsorComment = {
+  id: string;
+  displayName: string;
+  body: string;
   mine: boolean;
 };
 
@@ -580,8 +588,10 @@ export const listSponsors = createServerFn({ method: "GET" })
       note: string;
       years_clean: number | null;
       window_start: number | null;
+      comment_count: number;
     }>`
-      select s.user_id, p.display_name, s.kind, s.clean_time, s.note, s.years_clean, s.window_start
+      select s.user_id, p.display_name, s.kind, s.clean_time, s.note, s.years_clean, s.window_start,
+             (select count(*)::int from sponsor_comments c where c.sponsor_user_id = s.user_id) as comment_count
       from sponsors s
       join profiles p on p.user_id = s.user_id
       order by s.created_at desc
@@ -595,8 +605,70 @@ export const listSponsors = createServerFn({ method: "GET" })
       note: row.note,
       yearsClean: row.years_clean == null ? null : num(row.years_clean),
       windowStart: row.window_start == null ? null : num(row.window_start),
+      commentCount: num(row.comment_count),
       mine: row.user_id === context.userId,
     }));
+  });
+
+export const listSponsorComments = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((input: { postUserId: string }) => ({
+    postUserId: String(input?.postUserId ?? ""),
+  }))
+  .handler(async ({ context, data }): Promise<SponsorComment[]> => {
+    if (!data.postUserId) return [];
+    const sql = await getSql();
+    const rows = await sql<{
+      id: string;
+      author_id: string;
+      display_name: string;
+      body: string;
+    }>`
+      select c.id, c.author_id, p.display_name, c.body
+      from sponsor_comments c
+      join profiles p on p.user_id = c.author_id
+      where c.sponsor_user_id = ${data.postUserId}
+      order by c.created_at asc
+      limit 200
+    `;
+    return rows.map((row) => ({
+      id: row.id,
+      displayName: row.display_name,
+      body: row.body,
+      mine: row.author_id === context.userId,
+    }));
+  });
+
+export const addSponsorComment = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { postUserId: string; body: string }) => ({
+    postUserId: String(input?.postUserId ?? ""),
+    body: String(input?.body ?? "")
+      .trim()
+      .slice(0, 500),
+  }))
+  .handler(async ({ context, data }) => {
+    if (!data.postUserId || !data.body) {
+      return { ok: false as const, error: "Write a comment first." };
+    }
+    if (data.postUserId === context.userId) {
+      return { ok: false as const, error: "That is your own post." };
+    }
+    const sql = await getSql();
+    const posts = await sql<{ user_id: string }>`
+      select user_id from sponsors where user_id = ${data.postUserId}
+    `;
+    if (!posts[0]) return { ok: false as const, error: "That post is no longer here." };
+    const profiles = await sql<{ user_id: string }>`
+      select user_id from profiles where user_id = ${context.userId}
+    `;
+    if (!profiles[0]) return { ok: false as const, error: "Set up your name first." };
+    const id = crypto.randomUUID();
+    await sql`
+      insert into sponsor_comments (id, sponsor_user_id, author_id, body)
+      values (${id}, ${data.postUserId}, ${context.userId}, ${data.body})
+    `;
+    return { ok: true as const, id };
   });
 
 export const saveSponsor = createServerFn({ method: "POST" })
@@ -695,11 +767,16 @@ export const listSponsorChats = createServerFn({ method: "GET" })
     }>`
       select c.id, c.sponsor_id, c.seeker_id,
              sp.display_name as sponsor_name, sk.display_name as seeker_name,
-             s.years_clean, s.window_start
+             coalesce(
+               s.years_clean,
+               floor((current_date - cj.clean_since)::numeric / 365)::int
+             ) as years_clean,
+             s.window_start
       from sponsor_chats c
       join profiles sp on sp.user_id = c.sponsor_id
       join profiles sk on sk.user_id = c.seeker_id
       left join sponsors s on s.user_id = c.sponsor_id
+      left join clean_journals cj on cj.user_id = c.sponsor_id
       where c.sponsor_id = ${context.userId} or c.seeker_id = ${context.userId}
       order by c.created_at desc
     `;
@@ -715,46 +792,71 @@ export const listSponsorChats = createServerFn({ method: "GET" })
     });
   });
 
-export const openSponsorChat = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((input: { sponsorUserId: string }) => ({
-    sponsorUserId: String(input?.sponsorUserId ?? ""),
-  }))
-  .handler(async ({ context, data }) => {
-    if (!data.sponsorUserId) return { ok: false as const, error: "Choose a sponsor." };
-    if (data.sponsorUserId === context.userId)
-      return { ok: false as const, error: "That is your own post." };
-    const profile = await loadProfile(context.userId);
-    if (!profile) return { ok: false as const, error: "Set up your name first." };
-    const sql = await getSql();
-    const sponsors = await sql<{
-      kind: string;
-      years_clean: number | null;
-      window_start: number | null;
-    }>`
-      select kind, years_clean, window_start from sponsors where user_id = ${data.sponsorUserId}
-    `;
-    const sponsor = sponsors[0];
-    if (
-      !sponsor ||
-      sponsor.kind !== "offering" ||
-      num(sponsor.years_clean) < 2 ||
-      sponsor.window_start == null
-    ) {
+/** Open (or reuse) the one private room between this pair, for either kind of post. */
+async function createSponsorConnection(userId: string, postUserId: string) {
+  if (!postUserId) return { ok: false as const, error: "Choose a member." };
+  if (postUserId === userId) return { ok: false as const, error: "That is your own post." };
+  const sql = await getSql();
+  const profiles = await sql<{ user_id: string }>`
+    select user_id from profiles where user_id = ${userId}
+  `;
+  if (!profiles[0]) return { ok: false as const, error: "Set up your name first." };
+
+  const sponsors = await sql<{
+    kind: "seeking" | "offering";
+    years_clean: number | null;
+    window_start: number | null;
+  }>`
+    select kind, years_clean, window_start from sponsors where user_id = ${postUserId}
+  `;
+  const post = sponsors[0];
+  if (!post) return { ok: false as const, error: "That post is no longer here." };
+
+  let sponsorId: string;
+  let seekerId: string;
+  if (post.kind === "offering") {
+    if (num(post.years_clean) < 2 || post.window_start == null) {
       return { ok: false as const, error: "That person is not available as a sponsor." };
     }
-    const existing = await sql<{ id: string }>`
-      select id from sponsor_chats
-      where sponsor_id = ${data.sponsorUserId} and seeker_id = ${context.userId}
+    sponsorId = postUserId;
+    seekerId = userId;
+  } else {
+    const clean = await sql<{ can_sponsor: boolean }>`
+      select exists (
+        select 1 from clean_journals
+        where user_id = ${userId}
+          and clean_since <= current_date - interval '2 years'
+      ) as can_sponsor
     `;
-    if (existing[0]) return { ok: true as const, chatId: existing[0].id };
-    const id = crypto.randomUUID();
-    await sql`
-      insert into sponsor_chats (id, sponsor_id, seeker_id)
-      values (${id}, ${data.sponsorUserId}, ${context.userId})
-    `;
-    return { ok: true as const, chatId: id };
-  });
+    if (!clean[0]?.can_sponsor) {
+      return {
+        ok: false as const,
+        error:
+          "Sponsor access needs at least 2 years clean. Add your clean date in the Journal first.",
+      };
+    }
+    sponsorId = userId;
+    seekerId = postUserId;
+  }
+
+  const id = crypto.randomUUID();
+  const saved = await sql<{ id: string }>`
+    insert into sponsor_chats (id, sponsor_id, seeker_id)
+    values (${id}, ${sponsorId}, ${seekerId})
+    on conflict (sponsor_id, seeker_id) do update set sponsor_id = excluded.sponsor_id
+    returning id
+  `;
+  return saved[0]
+    ? { ok: true as const, chatId: saved[0].id }
+    : { ok: false as const, error: "Could not open that private room. Try again." };
+}
+
+export const openSponsorConnection = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { postUserId: string }) => ({
+    postUserId: String(input?.postUserId ?? ""),
+  }))
+  .handler(async ({ context, data }) => createSponsorConnection(context.userId, data.postUserId));
 
 export const getSponsorChat = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -773,11 +875,16 @@ export const getSponsorChat = createServerFn({ method: "GET" })
     }>`
       select c.id, c.sponsor_id, c.seeker_id,
              sp.display_name as sponsor_name, sk.display_name as seeker_name,
-             s.years_clean, s.window_start
+             coalesce(
+               s.years_clean,
+               floor((current_date - cj.clean_since)::numeric / 365)::int
+             ) as years_clean,
+             s.window_start
       from sponsor_chats c
       join profiles sp on sp.user_id = c.sponsor_id
       join profiles sk on sk.user_id = c.seeker_id
       left join sponsors s on s.user_id = c.sponsor_id
+      left join clean_journals cj on cj.user_id = c.sponsor_id
       where c.id = ${data.id}
         and (c.sponsor_id = ${context.userId} or c.seeker_id = ${context.userId})
     `;

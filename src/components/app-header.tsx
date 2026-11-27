@@ -21,6 +21,9 @@ export function AppHeader({ profile }: { profile: Profile }) {
           <Link to="/journal" className="rounded-lg px-3 py-2 text-sm text-muted hover:text-fg">
             Journal
           </Link>
+          <Link to="/community" className="rounded-lg px-3 py-2 text-sm text-muted hover:text-fg">
+            Community
+          </Link>
           <Link to="/sponsors" className="rounded-lg px-3 py-2 text-sm text-muted hover:text-fg">
             Sponsors
           </Link>

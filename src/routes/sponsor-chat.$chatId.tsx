@@ -3,13 +3,19 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { LoginCard } from "@/components/login-card";
 import { MeetingRoom } from "@/components/meeting-room";
-import { windowLabel } from "@/lib/sponsor-windows";
+import { connectionSummary } from "@/lib/sponsor-windows";
 import { getMe, getSponsorChat, type Meeting, type Profile, type SponsorChatSummary } from "@/lib/meetings.functions";
 
-export const Route = createFileRoute("/sponsor-chat/$chatId")({ component: SponsorChatPage });
+export const Route = createFileRoute("/sponsor-chat/$chatId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search.mode === "chat" ? ("chat" as const) : ("video" as const),
+  }),
+  component: SponsorChatPage,
+});
 
 function SponsorChatPage() {
   const { chatId } = Route.useParams();
+  const { mode } = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [chat, setChat] = useState<SponsorChatSummary | null | undefined>(undefined);
@@ -40,7 +46,7 @@ function SponsorChatPage() {
   if (isPending || (user && (profile === undefined || chat === undefined))) {
     return (
       <main className="grid min-h-screen place-items-center">
-        <p className="text-muted">Opening the private video…</p>
+        <p className="text-muted">Opening your private room…</p>
       </main>
     );
   }
@@ -70,7 +76,7 @@ function SponsorChatPage() {
     id: chat.id,
     leaderId: "",
     leaderName: chat.otherName,
-    title: "Private video",
+    title: "Private room",
     format: "Sponsor",
     description: "",
     startsAt: new Date().toISOString(),
@@ -85,11 +91,12 @@ function SponsorChatPage() {
     <MeetingRoom
       meeting={meeting}
       selfId={user.id}
+      focusChat={mode === "chat"}
       privateWith={{
         otherName: chat.otherName,
         detail: chat.youAreSponsor
           ? "You are the sponsor. Only the two of you are here."
-          : `${chat.yearsClean ?? "?"} years clean · available ${windowLabel(chat.windowStart)}`,
+          : connectionSummary(chat.yearsClean, chat.windowStart),
       }}
     />
   );
