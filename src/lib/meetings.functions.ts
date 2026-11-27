@@ -854,6 +854,34 @@ export const getRoomAccess = createServerFn({ method: "GET" })
     };
   });
 
+export const getVideoToken = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { roomId: string }) => ({ roomId: String(input?.roomId ?? "") }))
+  .handler(
+    async ({
+      context,
+      data,
+    }): Promise<{ ok: true; token: string; url: string } | { ok: false; error: string }> => {
+      if (!data.roomId) return { ok: false as const, error: "Missing room." };
+      const kind = await resolveRoom(context.userId, data.roomId);
+      if (kind === "none") return { ok: false as const, error: "This room is not open to you." };
+      if (!(await roomWritable(context.userId, data.roomId))) {
+        return { ok: false as const, error: "This room is not open right now." };
+      }
+      const profile = await loadProfile(context.userId);
+      if (!profile) return { ok: false as const, error: "Set your first name first." };
+
+      const { createRoomToken } = await import("./livekit.server");
+      const session = await createRoomToken({
+        roomName: `${kind}_${data.roomId}`,
+        identity: context.userId,
+        name: profile.displayName,
+      });
+      if (!session) return { ok: false as const, error: "Video is not configured yet." };
+      return { ok: true as const, ...session };
+    },
+  );
+
 export const heartbeat = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { meetingId: string }) => ({ meetingId: String(input?.meetingId ?? "") }))

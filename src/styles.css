@@ -37,3 +37,18 @@
     }
   }
 }
+
+/* Meeting video uses LiveKit's grid and control bar. Chat stays in the app's
+   own sidebar. */
+.lk-video-conference-inner,
+.lk-grid-layout-wrapper {
+  min-height: 0;
+}
+
+.lk-video-conference-inner {
+  height: 100%;
+}
+
+.lk-video-conference .lk-control-bar {
+  border-top: 1px solid var(--color-border);
+}

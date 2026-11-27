@@ -1,14 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Mic, MicOff, Video, VideoOff, BookOpen } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
 import {
+  ConnectionStateToast,
+  ControlBar,
+  GridLayout,
+  LiveKitRoom,
+  ParticipantTile,
+  RoomAudioRenderer,
+  StartAudio,
+  useTracks,
+} from "@livekit/components-react";
+import { Track } from "livekit-client";
+import "@livekit/components-styles";
+import {
+  getVideoToken,
   heartbeat,
   leaveRoom,
   listMessages,
   listPresence,
-  pollSignals,
   postMessage,
-  postSignal,
   rescheduleMeeting,
   ROOM_CAPACITY,
   roomStateMessage,
@@ -19,10 +30,6 @@ import {
   type RoomState,
 } from "@/lib/meetings.functions";
 
-const ICE = [
-  { urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] },
-];
-
 const GUIDE = [
   "Open with a moment of silence, then the Serenity Prayer in the we form.",
   "Ask who is new, using first names only.",
@@ -31,85 +38,46 @@ const GUIDE = [
   "Close with gratitude and the reminder: who you see here, what you hear here, let it stay here.",
 ];
 
-type Payload =
-  | { type: "offer"; sdp: RTCSessionDescriptionInit }
-  | { type: "answer"; sdp: RTCSessionDescriptionInit }
-  | { type: "ice"; candidate: RTCIceCandidateInit };
-
 export function MeetingRoom({
   meeting,
   selfId,
   privateWith,
   access,
+  focusChat,
 }: {
   meeting: Meeting;
   selfId: string;
   privateWith?: { otherName: string; detail: string };
   access?: RoomAccess;
+  focusChat?: boolean;
 }) {
   const [peers, setPeers] = useState<PresencePeer[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
-  const [camError, setCamError] = useState("");
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
   const [guideOpen, setGuideOpen] = useState(false);
   const [timeDraft, setTimeDraft] = useState("");
   const [notice, setNotice] = useState("");
-  const [joiningMedia, setJoiningMedia] = useState(false);
-  const [streamReady, setStreamReady] = useState(false);
-  const [remotes, setRemotes] = useState<Record<string, MediaStream>>({});
   const [denied, setDenied] = useState<RoomState | null>(access && access.state !== "open" ? access.state : null);
   const [roomCount, setRoomCount] = useState(access?.count ?? 0);
+  const [videoSession, setVideoSession] = useState<{ token: string; url: string } | null>(null);
+  const [videoError, setVideoError] = useState("");
+  const [mediaError, setMediaError] = useState("");
+  const [videoAttempt, setVideoAttempt] = useState(0);
   const deniedRef = useRef<RoomState | null>(access && access.state !== "open" ? access.state : null);
-  const localRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const pcs = useRef(new Map<string, RTCPeerConnection>());
-  const makingOffer = useRef(new Map<string, boolean>());
-  const cursor = useRef("");
-  const pendingIce = useRef(new Map<string, RTCIceCandidateInit[]>());
+  const chatPanelRef = useRef<HTMLElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const connections = pcs.current;
+    if (!focusChat) return;
+    chatPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    chatInputRef.current?.focus({ preventScroll: true });
+  }, [focusChat]);
+
+  useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      connections.forEach((pc) => pc.close());
-      connections.clear();
       void leaveRoom({ data: { meetingId: meeting.id } });
     };
   }, [meeting.id]);
-
-  async function startMedia() {
-    setJoiningMedia(true);
-    setCamError("");
-    try {
-      const media = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = media;
-      if (localRef.current) localRef.current.srcObject = media;
-      for (const pc of pcs.current.values()) syncLocalTracks(pc);
-      setMicOn(true);
-      setCamOn(true);
-      setStreamReady(true);
-    } catch {
-      try {
-        const audio = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        streamRef.current?.getTracks().forEach((track) => track.stop());
-        streamRef.current = audio;
-        if (localRef.current) localRef.current.srcObject = audio;
-        for (const pc of pcs.current.values()) syncLocalTracks(pc);
-        setMicOn(true);
-        setCamOn(false);
-        setStreamReady(true);
-        setCamError("Camera is blocked. Your microphone is on, and chat still works.");
-      } catch {
-        setCamError("Camera and microphone stayed off. You can still stay for the sharing and chat. Tap the button again if you want to allow them.");
-      }
-    } finally {
-      setJoiningMedia(false);
-    }
-  }
 
   useEffect(() => {
     let stop = false;
@@ -151,215 +119,26 @@ export function MeetingRoom({
   }, [meeting.id]);
 
   useEffect(() => {
-    const others = peers.filter((peer) => peer.userId !== selfId);
-    const live = new Set(others.map((peer) => peer.userId));
-    for (const [id, pc] of pcs.current) {
-      if (!live.has(id)) {
-        pc.close();
-        pcs.current.delete(id);
-        makingOffer.current.delete(id);
-        pendingIce.current.delete(id);
-        setRemotes((current) => {
-          const next = { ...current };
-          delete next[id];
-          return next;
-        });
-      }
-    }
-    if (!streamRef.current) return;
-    for (const peer of others) {
-      if (!pcs.current.has(peer.userId)) ensurePc(peer.userId);
-    }
-    // Re-run when the camera arrives or the set of peers changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [peers.map((peer) => peer.userId).join("|"), selfId, streamReady]);
-
-  useEffect(() => {
     let stop = false;
-    let firstPull = true;
-    async function pull() {
-      if (stop) return;
-      try {
-        const batch = await pollSignals({
-          data: { meetingId: meeting.id, after: cursor.current, reset: firstPull },
-        });
-        firstPull = false;
-        for (const signal of batch) {
-          cursor.current = signal.id;
-          let payload: Payload;
-          try {
-            payload = JSON.parse(signal.payload) as Payload;
-          } catch {
-            continue;
-          }
-          try {
-            await accept(signal.fromId, payload);
-          } catch {
-            /* one bad signal must not stop the rest of the batch */
-          }
-        }
-      } catch {
-        /* next tick */
-      }
-    }
-    const timer = window.setInterval(() => void pull(), 1200);
-    void pull();
+    setVideoSession(null);
+    setVideoError("");
+    setMediaError("");
+    void getVideoToken({ data: { roomId: meeting.id } })
+      .then((result) => {
+        if (stop) return;
+        if (result.ok) setVideoSession({ token: result.token, url: result.url });
+        else setVideoError(result.error);
+      })
+      .catch(() => {
+        if (!stop) setVideoError("Video could not connect. Chat still works.");
+      });
     return () => {
       stop = true;
-      window.clearInterval(timer);
     };
-    // accept closes over refs
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meeting.id]);
-
-  /** Add camera/mic tracks that are not on the connection yet. */
-  function syncLocalTracks(pc: RTCPeerConnection) {
-    const stream = streamRef.current;
-    if (!stream) return;
-    for (const track of stream.getTracks()) {
-      if (pc.getSenders().some((sender) => sender.track === track)) continue;
-      const sameKind = pc.getSenders().find((sender) => sender.track?.kind === track.kind);
-      if (sameKind) void sameKind.replaceTrack(track);
-      else pc.addTrack(track, stream);
-    }
-  }
-
-  async function sendOffer(remoteId: string, pc: RTCPeerConnection) {
-    if (pc.signalingState !== "stable" || makingOffer.current.get(remoteId)) return;
-    makingOffer.current.set(remoteId, true);
-    try {
-      await pc.setLocalDescription();
-      const local = pc.localDescription;
-      if (!local || local.type !== "offer") return;
-      await postSignal({
-        data: {
-          meetingId: meeting.id,
-          toId: remoteId,
-          payload: JSON.stringify({
-            type: "offer",
-            sdp: { type: local.type, sdp: local.sdp },
-          } satisfies Payload),
-        },
-      });
-    } catch {
-      /* the browser retries on the next negotiationneeded event */
-    } finally {
-      makingOffer.current.set(remoteId, false);
-    }
-  }
-
-  function ensurePc(remoteId: string) {
-    const existing = pcs.current.get(remoteId);
-    if (existing) return existing;
-    const pc = new RTCPeerConnection({ iceServers: ICE });
-    makingOffer.current.set(remoteId, false);
-    pc.onnegotiationneeded = () => {
-      void sendOffer(remoteId, pc);
-    };
-    pc.onicecandidate = (event) => {
-      if (!event.candidate) return;
-      void postSignal({
-        data: {
-          meetingId: meeting.id,
-          toId: remoteId,
-          payload: JSON.stringify({ type: "ice", candidate: event.candidate.toJSON() } satisfies Payload),
-        },
-      });
-    };
-    pc.ontrack = (event) => {
-      const incoming = event.streams[0];
-      if (incoming) setRemotes((current) => ({ ...current, [remoteId]: incoming }));
-    };
-    pcs.current.set(remoteId, pc);
-    syncLocalTracks(pc);
-    return pc;
-  }
-
-  async function flushIce(remoteId: string, pc: RTCPeerConnection) {
-    const queued = pendingIce.current.get(remoteId) ?? [];
-    pendingIce.current.set(remoteId, []);
-    for (const candidate of queued) {
-      try {
-        await pc.addIceCandidate(candidate);
-      } catch {
-        /* ignore late candidates */
-      }
-    }
-  }
-
-  async function accept(fromId: string, payload: Payload) {
-    if (fromId === selfId) return;
-    const pc = ensurePc(fromId);
-    if (payload.type === "offer") {
-      // Perfect negotiation: the smaller id rolls back and accepts; the
-      // larger id keeps its own offer when the two offers cross.
-      const polite = selfId < fromId;
-      const collision =
-        makingOffer.current.get(fromId) === true || pc.signalingState !== "stable";
-      if (!polite && collision) return;
-      try {
-        await pc.setRemoteDescription(payload.sdp);
-      } catch {
-        return;
-      }
-      await flushIce(fromId, pc);
-      await pc.setLocalDescription();
-      const local = pc.localDescription;
-      if (!local || local.type !== "answer") return;
-      await postSignal({
-        data: {
-          meetingId: meeting.id,
-          toId: fromId,
-          payload: JSON.stringify({
-            type: "answer",
-            sdp: { type: local.type, sdp: local.sdp },
-          } satisfies Payload),
-        },
-      });
-      return;
-    }
-    if (payload.type === "answer") {
-      if (pc.signalingState !== "have-local-offer") return;
-      try {
-        await pc.setRemoteDescription(payload.sdp);
-        await flushIce(fromId, pc);
-      } catch {
-        /* the offer was superseded by a renegotiation */
-      }
-      return;
-    }
-    if (!pc.remoteDescription) {
-      const queue = pendingIce.current.get(fromId) ?? [];
-      queue.push(payload.candidate);
-      pendingIce.current.set(fromId, queue);
-      return;
-    }
-    try {
-      await pc.addIceCandidate(payload.candidate);
-    } catch {
-      /* candidate for a superseded offer */
-    }
-  }
-
-  function toggleMic() {
-    const next = !micOn;
-    streamRef.current?.getAudioTracks().forEach((track) => {
-      track.enabled = next;
-    });
-    setMicOn(next);
-  }
-
-  function toggleCam() {
-    const next = !camOn;
-    streamRef.current?.getVideoTracks().forEach((track) => {
-      track.enabled = next;
-    });
-    setCamOn(next);
-  }
+  }, [meeting.id, videoAttempt]);
 
   const starts = new Date(meeting.startsAt);
   const canReschedule = meeting.mine && starts.getTime() - Date.now() >= 48 * 60 * 60 * 1000;
-  const others = peers.filter((peer) => peer.userId !== selfId);
 
   if (denied) {
     const title =
@@ -391,12 +170,17 @@ export function MeetingRoom({
           <Link to={privateWith ? "/sponsors" : "/"} className="text-sm text-muted">
             {privateWith ? "← Sponsors" : "← All meetings"}
           </Link>
-          <h1 className="font-display text-3xl text-fg">{privateWith ? "Private video" : meeting.title}</h1>
+          <h1 className="font-display text-3xl text-fg">{privateWith ? "Private room" : meeting.title}</h1>
           <p className="text-sm text-muted">
             {privateWith
               ? `${privateWith.otherName} · ${privateWith.detail}`
               : `${meeting.format} · ${starts.toLocaleString()} · ${meeting.leaderName}`}
           </p>
+          {privateWith && (
+            <p className="mt-1 text-sm text-muted">
+              Video and chat are only visible to the two of you. Camera and mic stay off until you turn them on.
+            </p>
+          )}
           {meeting.mine && !privateWith && (
             <p className="mt-1 text-sm text-primary">
               {meeting.hosted ? "This meeting counted." : "This counts once the meeting is over, if you guide it."}
@@ -409,14 +193,14 @@ export function MeetingRoom({
           )}
         </div>
         {!privateWith && (
-        <button
-          type="button"
-          onClick={() => setGuideOpen((open) => !open)}
-          className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-sm text-fg"
-        >
-          <BookOpen className="size-4" />
-          Chair guide
-        </button>
+          <button
+            type="button"
+            onClick={() => setGuideOpen((open) => !open)}
+            className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-sm text-fg"
+          >
+            <BookOpen className="size-4" />
+            Chair guide
+          </button>
         )}
       </div>
 
@@ -430,51 +214,55 @@ export function MeetingRoom({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <figure className="overflow-hidden rounded-lg border border-border bg-surface">
-              <video ref={localRef} autoPlay playsInline muted className="aspect-video w-full bg-bg object-cover" />
-              <figcaption className="px-3 py-2 text-sm text-muted">
-                {streamReady
-                  ? `You${!micOn ? " · muted" : ""}${!camOn ? " · camera off" : ""}`
-                  : "You · camera and mic stay off until you turn them on"}
-              </figcaption>
-            </figure>
-            {others.map((peer) => (
-              <RemoteTile key={peer.userId} name={peer.displayName} stream={remotes[peer.userId]} />
-            ))}
-            {others.length === 0 && (
-              <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-border px-6 text-center text-sm text-muted">
-                {privateWith
-                  ? `Waiting for ${privateWith.otherName}. Only the two of you can join this video.`
-                  : "Waiting for others. Meetings can run any hour."}
+          <div
+            data-lk-theme="default"
+            className="h-[32rem] overflow-hidden rounded-lg border border-border bg-surface"
+          >
+            {videoSession ? (
+              <LiveKitRoom
+                token={videoSession.token}
+                serverUrl={videoSession.url}
+                audio={false}
+                video={false}
+                options={{ adaptiveStream: true, dynacast: true }}
+                onMediaDeviceFailure={(failure, kind) => {
+                  void failure;
+                  setMediaError(
+                    kind === "audioinput"
+                      ? "Microphone could not start. Check your browser permissions."
+                      : "Camera could not start. Check your browser permissions, then try again.",
+                  );
+                }}
+                onError={() => setMediaError("Video could not connect. Chat still works.")}
+                className="h-full"
+              >
+                <LiveKitStage />
+              </LiveKitRoom>
+            ) : videoError ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                <p className="text-sm text-fg">Video is not available right now.</p>
+                <p className="max-w-md text-sm text-muted">{videoError}</p>
+                <p className="max-w-md text-sm text-muted">Chat and the participant list still work.</p>
+                <button
+                  type="button"
+                  onClick={() => setVideoAttempt((attempt) => attempt + 1)}
+                  className="h-11 rounded-lg border border-border px-4 text-sm font-semibold text-fg"
+                >
+                  Try video again
+                </button>
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center gap-2 text-sm text-muted">
+                <Loader2 className="size-4 animate-spin" />
+                Connecting video…
               </div>
             )}
           </div>
-          {camError && <p className="text-sm text-danger">{camError}</p>}
-          <div className="flex flex-wrap gap-2">
-            {!streamReady ? (
-              <button
-                type="button"
-                onClick={() => void startMedia()}
-                disabled={joiningMedia}
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-fg disabled:opacity-60"
-              >
-                <Video className="size-4" />
-                {joiningMedia ? "Asking for camera…" : "Turn on camera and mic"}
-              </button>
-            ) : (
-              <>
-                <button type="button" onClick={toggleMic} className="inline-flex h-11 items-center gap-2 rounded-lg bg-surface-2 px-4 text-sm text-fg">
-                  {micOn ? <Mic className="size-4" /> : <MicOff className="size-4" />}
-                  {micOn ? "Mute" : "Unmute"}
-                </button>
-                <button type="button" onClick={toggleCam} className="inline-flex h-11 items-center gap-2 rounded-lg bg-surface-2 px-4 text-sm text-fg">
-                  {camOn ? <Video className="size-4" /> : <VideoOff className="size-4" />}
-                  {camOn ? "Camera off" : "Camera on"}
-                </button>
-              </>
-            )}
-          </div>
+          <p className="text-sm text-muted">
+            Everyone in the room can turn on their camera and microphone. Camera and mic stay off until you turn
+            them on in the video controls.
+          </p>
+          {mediaError && <p className="text-sm text-danger">{mediaError}</p>}
           {meeting.mine && !privateWith && (
             <form
               className="rounded-lg border border-border bg-surface p-4"
@@ -510,7 +298,7 @@ export function MeetingRoom({
           )}
         </section>
 
-        <aside className="flex h-[32rem] flex-col rounded-lg border border-border bg-surface">
+        <aside ref={chatPanelRef} className="flex h-[32rem] flex-col rounded-lg border border-border bg-surface">
           <h2 className="border-b border-border px-4 py-3 text-sm font-semibold text-fg">
             {privateWith
               ? `Private chat · ${roomCount} / 2`
@@ -552,6 +340,7 @@ export function MeetingRoom({
             }}
           >
             <input
+              ref={chatInputRef}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Share a line"
@@ -567,15 +356,28 @@ export function MeetingRoom({
   );
 }
 
-function RemoteTile({ name, stream }: { name: string; stream?: MediaStream }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    if (ref.current && stream) ref.current.srcObject = stream;
-  }, [stream]);
+function LiveKitStage() {
+  const tracks = useTracks(
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
+    { onlySubscribed: false },
+  );
+
   return (
-    <figure className="overflow-hidden rounded-lg border border-border bg-surface">
-      <video ref={ref} autoPlay playsInline className="aspect-video w-full bg-bg object-cover" />
-      <figcaption className="px-3 py-2 text-sm text-muted">{stream ? name : `${name} · connecting`}</figcaption>
-    </figure>
+    <div className="lk-video-conference h-full">
+      <div className="lk-video-conference-inner">
+        <div className="lk-grid-layout-wrapper">
+          <GridLayout tracks={tracks}>
+            <ParticipantTile />
+          </GridLayout>
+        </div>
+        <ControlBar controls={{ chat: false, settings: false, leave: false, screenShare: true }} />
+      </div>
+      <RoomAudioRenderer />
+      <StartAudio label="Allow audio" />
+      <ConnectionStateToast />
+    </div>
   );
 }
