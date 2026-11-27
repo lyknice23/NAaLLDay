@@ -35,7 +35,7 @@ final policy before launch.
 - Rooms hold **35 people**. Joining closes **20 minutes after the scheduled
   start**; anyone who joined before the lock keeps access afterwards.
 - A leader can always open their own room, even after the join lock.
-- Attendance is saved automatically with the meeting, join time, and time present. After a meeting ends, a member can request an attendance verification letter from the bottom of their homepage; it is emailed to the address on their account.
+- Attendance is saved automatically with the meeting, join time, and time present. After a meeting ends, a member with at least **45 minutes** of recorded attendance can request an attendance verification letter from the bottom of their homepage; it is emailed to the address on their account.
 - Rooms include camera and microphone controls, a live participant list, and
   chat. Video and audio run through LiveKit Cloud so every participant can
   publish without a peer-to-peer mesh. Presence is tracked with heartbeats, so
@@ -164,6 +164,7 @@ applied server-side, not just hidden in the UI:
 | Returning attendees  | Anyone who joined before the lock keeps access    |
 | Leaders              | Can always open their own room                    |
 | Ended meetings       | Closed to everyone                                |
+| Attendance letter    | Meeting ended plus 45 minutes of recorded time     |
 | Rescheduling         | At least 48 hours before the start                |
 | Leader participation | 3 guided meetings per week after the first week   |
 

@@ -1,6 +1,8 @@
 /** Client-safe attendance types and formatting. */
 
-export const MIN_ATTENDANCE_SECONDS = 60;
+/** Recorded time a member needs before an attendance letter can be requested. */
+export const MIN_ATTENDANCE_MINUTES = 45;
+export const MIN_ATTENDANCE_SECONDS = MIN_ATTENDANCE_MINUTES * 60;
 export const ATTENDANCE_LETTER_COOLDOWN_SECONDS = 60;
 
 /** The small shape the homepage needs; the letter request loads the rest. */

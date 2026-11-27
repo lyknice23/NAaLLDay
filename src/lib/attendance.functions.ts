@@ -7,7 +7,11 @@ import {
   getAttendanceForMeeting,
   listAttendanceForUser,
 } from "@/lib/attendance.server";
-import { attendanceEligibility, secondsUntilLetterAllowed } from "@/lib/attendance";
+import {
+  MIN_ATTENDANCE_MINUTES,
+  attendanceEligibility,
+  secondsUntilLetterAllowed,
+} from "@/lib/attendance";
 
 export const listAttendance = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -55,7 +59,7 @@ export const requestAttendanceLetter = createServerFn({ method: "POST" })
       if (!eligibility.longEnough) {
         return {
           ok: false as const,
-          error: "We only issue a letter after at least one minute of recorded attendance.",
+          error: `We only issue a letter after at least ${MIN_ATTENDANCE_MINUTES} minutes of recorded attendance.`,
         };
       }
       if (!attendance.email) {

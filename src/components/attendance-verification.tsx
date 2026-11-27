@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { listAttendance, requestAttendanceLetter } from "@/lib/attendance.functions";
-import { formatDuration, type AttendanceRecord } from "@/lib/attendance";
+import { MIN_ATTENDANCE_MINUTES, formatDuration, type AttendanceRecord } from "@/lib/attendance";
 
 type LetterDelivery = {
   sentTo: string;
@@ -53,8 +53,7 @@ export function AttendanceVerification() {
 
       {records !== null && records.length === 0 && !error && (
         <p className="mt-4 rounded-lg border border-border bg-bg px-4 py-3 text-sm text-muted">
-          No attendance has been recorded yet. Join a meeting and stay for at least a minute; it
-          will appear here after the meeting ends.
+          {`No attendance has been recorded yet. Join a meeting and stay for at least ${MIN_ATTENDANCE_MINUTES} minutes; it will appear here after the meeting ends.`}
         </p>
       )}
 
@@ -140,8 +139,7 @@ export function AttendanceVerification() {
 
       {records !== null && records.length > 0 && eligible.length === 0 && !error && (
         <p className="mt-4 text-sm text-muted">
-          Letters become available after the meeting ends and you have at least one minute of
-          recorded attendance.
+          {`Letters become available after the meeting ends and you have at least ${MIN_ATTENDANCE_MINUTES} minutes of recorded attendance.`}
         </p>
       )}
 

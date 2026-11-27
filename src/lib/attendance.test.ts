@@ -11,16 +11,16 @@ const ENDED = new Date(NOW - 1_000).toISOString();
 const UPCOMING = new Date(NOW + 1_000).toISOString();
 
 describe("attendanceEligibility", () => {
-  it("requires both the meeting end and one minute of attendance", () => {
-    assert.deepEqual(attendanceEligibility({ durationSeconds: 60, endsAt: ENDED }, NOW), {
+  it("requires both the meeting end and 45 minutes of attendance", () => {
+    assert.deepEqual(attendanceEligibility({ durationSeconds: 2700, endsAt: ENDED }, NOW), {
       ended: true,
       longEnough: true,
       eligible: true,
     });
   });
 
-  it("rejects attendance shorter than one minute", () => {
-    assert.deepEqual(attendanceEligibility({ durationSeconds: 59, endsAt: ENDED }, NOW), {
+  it("rejects attendance shorter than 45 minutes", () => {
+    assert.deepEqual(attendanceEligibility({ durationSeconds: 2699, endsAt: ENDED }, NOW), {
       ended: true,
       longEnough: false,
       eligible: false,
@@ -28,7 +28,7 @@ describe("attendanceEligibility", () => {
   });
 
   it("rejects a meeting that has not ended, even with enough attendance", () => {
-    assert.deepEqual(attendanceEligibility({ durationSeconds: 120, endsAt: UPCOMING }, NOW), {
+    assert.deepEqual(attendanceEligibility({ durationSeconds: 2700, endsAt: UPCOMING }, NOW), {
       ended: false,
       longEnough: true,
       eligible: false,
@@ -36,7 +36,7 @@ describe("attendanceEligibility", () => {
   });
 
   it("treats an invalid end time as not ended", () => {
-    assert.deepEqual(attendanceEligibility({ durationSeconds: 120, endsAt: "not-a-date" }, NOW), {
+    assert.deepEqual(attendanceEligibility({ durationSeconds: 2700, endsAt: "not-a-date" }, NOW), {
       ended: false,
       longEnough: true,
       eligible: false,

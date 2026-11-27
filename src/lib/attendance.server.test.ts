@@ -143,7 +143,7 @@ describe("rejoin behavior", () => {
 });
 
 describe("listAttendanceForUser", () => {
-  it("marks ended meetings eligible only after one minute", async () => {
+  it("marks ended meetings eligible only after 45 minutes", async () => {
     await pg.query(
       `insert into meetings (id, leader_id, title, format, starts_at, ends_at)
        values
@@ -158,9 +158,9 @@ describe("listAttendanceForUser", () => {
       `insert into meeting_attendance
          (meeting_id, user_id, first_joined_at, last_seen_at, duration_seconds)
        values
-         ('past-eligible', $1, now() - interval '2 hours', now() - interval '1 hour', 60),
-         ('past-too-short', $1, now() - interval '2 hours', now() - interval '1 hour', 59),
-         ('future', $1, now(), now(), 120)`,
+         ('past-eligible', $1, now() - interval '2 hours', now() - interval '1 hour', 2700),
+         ('past-too-short', $1, now() - interval '2 hours', now() - interval '1 hour', 2699),
+         ('future', $1, now(), now(), 2700)`,
       [USER],
     );
 
