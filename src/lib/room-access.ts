@@ -1,13 +1,13 @@
 /**
  * Room access rules, kept free of server-only imports so they can be tested
- * directly: the 50-seat capacity, the 20-minute join lock, and the end cutoff.
+ * directly: the 35-seat capacity, the 20-minute join lock, and the end cutoff.
  *
  * The server reads the facts from Postgres and passes them through
  * `buildRoomAccess`, which is the single place the rules live.
  */
 
-/** A room holds 50 people. */
-export const ROOM_CAPACITY = 50;
+/** A room holds 35 people. */
+export const ROOM_CAPACITY = 35;
 /** Joining closes this many minutes after the scheduled start. */
 export const JOIN_LOCK_MINUTES = 20;
 /** A heartbeat older than this no longer counts as being in the room. */
@@ -30,7 +30,7 @@ export type RoomAccess = {
 const ROOM_MESSAGES: Record<RoomState, string> = {
   open: "",
   locked: "Joining closes 20 minutes after the start. You can still sign up for another meeting.",
-  full: "This meeting is full — 50 people are already in the room.",
+  full: `This meeting is full — ${ROOM_CAPACITY} people are already in the room.`,
   ended: "This meeting has ended.",
 };
 

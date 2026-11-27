@@ -116,7 +116,7 @@ describe("resolveRoomState", () => {
     assert.equal(resolveRoomState(facts(at(45), { isLeader: true })), "open");
   });
 
-  it("treats the 50th person as the last one in, not the 51st", () => {
+  it("treats the 35th person as the last one in, not the 36th", () => {
     assert.equal(resolveRoomState(facts(at(5), { liveCount: ROOM_CAPACITY - 1 })), "open");
     assert.equal(resolveRoomState(facts(at(5), { liveCount: ROOM_CAPACITY })), "full");
     assert.equal(resolveRoomState(facts(at(5), { liveCount: ROOM_CAPACITY + 5 })), "full");
@@ -143,18 +143,18 @@ describe("resolveRoomState", () => {
 });
 
 describe("readMeetingAccess against the real schema", () => {
-  it("counts 50 simulated participants and stops a 51st at the door", async () => {
-    await addPresence(50, at(5));
+  it("counts 35 simulated participants and stops a 36th at the door", async () => {
+    await addPresence(ROOM_CAPACITY, at(5));
     const access = await accessFor("newcomer", at(5));
-    assert.equal(access?.count, 50);
+    assert.equal(access?.count, ROOM_CAPACITY);
     assert.equal(access?.capacity, ROOM_CAPACITY);
     assert.equal(access?.state, "full");
   });
 
-  it("admits the 50th participant when 49 are present", async () => {
-    await addPresence(49, at(5));
-    const access = await accessFor("fiftieth", at(5));
-    assert.equal(access?.count, 49);
+  it("admits the 35th participant when 34 are present", async () => {
+    await addPresence(ROOM_CAPACITY - 1, at(5));
+    const access = await accessFor("thirty-fifth", at(5));
+    assert.equal(access?.count, ROOM_CAPACITY - 1);
     assert.equal(access?.state, "open");
   });
 
@@ -177,7 +177,7 @@ describe("readMeetingAccess against the real schema", () => {
   });
 
   it("counts only heartbeats inside the presence window", async () => {
-    await addPresence(50, at(5), 45);
+    await addPresence(ROOM_CAPACITY, at(5), 45);
     const access = await accessFor("newcomer", at(5));
     assert.equal(access?.count, 0);
     assert.equal(access?.state, "open");

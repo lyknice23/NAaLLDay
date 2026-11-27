@@ -176,7 +176,7 @@ export const setSignup = createServerFn({ method: "POST" })
         select count(*)::int as n from meeting_signups where meeting_id = ${data.meetingId}
       `;
       if (num(seats[0]?.n) >= ROOM_CAPACITY) {
-        return { ok: false as const, error: "This meeting is full (50 seats)." };
+        return { ok: false as const, error: `This meeting is full (${ROOM_CAPACITY} seats).` };
       }
       await sql`
         insert into meeting_signups (meeting_id, user_id)
