@@ -21,11 +21,13 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SponsorsRouteImport } from './routes/sponsors'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as ApiAttendanceLetterRouteImport } from './routes/api/attendance-letter'
 import { Route as OnboardingProfileRouteImport } from './routes/onboarding/profile'
 import { Route as OnboardingRolesRouteImport } from './routes/onboarding/roles'
 import { Route as OnboardingTermsRouteImport } from './routes/onboarding/terms'
 import { Route as RoomMeetingIdRouteImport } from './routes/room.$meetingId'
 import { Route as SponsorChatChatIdRouteImport } from './routes/sponsor-chat.$chatId'
+import { Route as VerifyReferenceRouteImport } from './routes/verify.$reference'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -88,6 +90,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAttendanceLetterRoute = ApiAttendanceLetterRouteImport.update({
+  id: '/api/attendance-letter',
+  path: '/api/attendance-letter',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingProfileRoute = OnboardingProfileRouteImport.update({
   id: '/onboarding/profile',
   path: '/onboarding/profile',
@@ -113,6 +120,11 @@ const SponsorChatChatIdRoute = SponsorChatChatIdRouteImport.update({
   path: '/sponsor-chat/$chatId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyReferenceRoute = VerifyReferenceRouteImport.update({
+  id: '/verify/$reference',
+  path: '/verify/$reference',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -132,11 +144,13 @@ export interface FileRoutesByFullPath {
   '/sponsors': typeof SponsorsRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/attendance-letter': typeof ApiAttendanceLetterRoute
   '/onboarding/profile': typeof OnboardingProfileRoute
   '/onboarding/roles': typeof OnboardingRolesRoute
   '/onboarding/terms': typeof OnboardingTermsRoute
   '/room/$meetingId': typeof RoomMeetingIdRoute
   '/sponsor-chat/$chatId': typeof SponsorChatChatIdRoute
+  '/verify/$reference': typeof VerifyReferenceRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -152,11 +166,13 @@ export interface FileRoutesByTo {
   '/sponsors': typeof SponsorsRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/attendance-letter': typeof ApiAttendanceLetterRoute
   '/onboarding/profile': typeof OnboardingProfileRoute
   '/onboarding/roles': typeof OnboardingRolesRoute
   '/onboarding/terms': typeof OnboardingTermsRoute
   '/room/$meetingId': typeof RoomMeetingIdRoute
   '/sponsor-chat/$chatId': typeof SponsorChatChatIdRoute
+  '/verify/$reference': typeof VerifyReferenceRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -173,11 +189,13 @@ export interface FileRoutesById {
   '/sponsors': typeof SponsorsRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/attendance-letter': typeof ApiAttendanceLetterRoute
   '/onboarding/profile': typeof OnboardingProfileRoute
   '/onboarding/roles': typeof OnboardingRolesRoute
   '/onboarding/terms': typeof OnboardingTermsRoute
   '/room/$meetingId': typeof RoomMeetingIdRoute
   '/sponsor-chat/$chatId': typeof SponsorChatChatIdRoute
+  '/verify/$reference': typeof VerifyReferenceRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -195,11 +213,13 @@ export interface FileRouteTypes {
     | '/sponsors'
     | '/terms'
     | '/verify-email'
+    | '/api/attendance-letter'
     | '/onboarding/profile'
     | '/onboarding/roles'
     | '/onboarding/terms'
     | '/room/$meetingId'
     | '/sponsor-chat/$chatId'
+    | '/verify/$reference'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -215,11 +235,13 @@ export interface FileRouteTypes {
     | '/sponsors'
     | '/terms'
     | '/verify-email'
+    | '/api/attendance-letter'
     | '/onboarding/profile'
     | '/onboarding/roles'
     | '/onboarding/terms'
     | '/room/$meetingId'
     | '/sponsor-chat/$chatId'
+    | '/verify/$reference'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -235,11 +257,13 @@ export interface FileRouteTypes {
     | '/sponsors'
     | '/terms'
     | '/verify-email'
+    | '/api/attendance-letter'
     | '/onboarding/profile'
     | '/onboarding/roles'
     | '/onboarding/terms'
     | '/room/$meetingId'
     | '/sponsor-chat/$chatId'
+    | '/verify/$reference'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -256,11 +280,13 @@ export interface RootRouteChildren {
   SponsorsRoute: typeof SponsorsRoute
   TermsRoute: typeof TermsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  ApiAttendanceLetterRoute: typeof ApiAttendanceLetterRoute
   OnboardingProfileRoute: typeof OnboardingProfileRoute
   OnboardingRolesRoute: typeof OnboardingRolesRoute
   OnboardingTermsRoute: typeof OnboardingTermsRoute
   RoomMeetingIdRoute: typeof RoomMeetingIdRoute
   SponsorChatChatIdRoute: typeof SponsorChatChatIdRoute
+  VerifyReferenceRoute: typeof VerifyReferenceRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -350,6 +376,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/attendance-letter': {
+      id: '/api/attendance-letter'
+      path: '/api/attendance-letter'
+      fullPath: '/api/attendance-letter'
+      preLoaderRoute: typeof ApiAttendanceLetterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding/profile': {
       id: '/onboarding/profile'
       path: '/onboarding/profile'
@@ -385,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorChatChatIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify/$reference': {
+      id: '/verify/$reference'
+      path: '/verify/$reference'
+      fullPath: '/verify/$reference'
+      preLoaderRoute: typeof VerifyReferenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -408,11 +448,13 @@ const rootRouteChildren: RootRouteChildren = {
   SponsorsRoute: SponsorsRoute,
   TermsRoute: TermsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  ApiAttendanceLetterRoute: ApiAttendanceLetterRoute,
   OnboardingProfileRoute: OnboardingProfileRoute,
   OnboardingRolesRoute: OnboardingRolesRoute,
   OnboardingTermsRoute: OnboardingTermsRoute,
   RoomMeetingIdRoute: RoomMeetingIdRoute,
   SponsorChatChatIdRoute: SponsorChatChatIdRoute,
+  VerifyReferenceRoute: VerifyReferenceRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

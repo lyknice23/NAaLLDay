@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 import {
   ATTENDANCE_LETTER_COOLDOWN_SECONDS,
   attendanceEligibility,
+  attendanceLetterPath,
+  attendanceLetterPdfPath,
+  isValidLetterReference,
+  normalizeLegalName,
   secondsUntilLetterAllowed,
 } from "./attendance.ts";
 
@@ -41,6 +45,50 @@ describe("attendanceEligibility", () => {
       longEnough: true,
       eligible: false,
     });
+  });
+});
+
+describe("normalizeLegalName", () => {
+  it("accepts a full name and collapses extra whitespace", () => {
+    assert.equal(normalizeLegalName("  Jordan   Ellis "), "Jordan Ellis");
+  });
+
+  it("keeps hyphens, apostrophes, periods, and accented letters", () => {
+    assert.equal(normalizeLegalName("Mary-Jane O'Neil-Smith Jr."), "Mary-Jane O'Neil-Smith Jr.");
+    assert.equal(normalizeLegalName("José Álvarez"), "José Álvarez");
+  });
+
+  it("rejects a first name or nickname with only one word", () => {
+    assert.equal(normalizeLegalName("Buffy"), null);
+  });
+
+  it("rejects digits, symbols, control characters, and empty input", () => {
+    assert.equal(normalizeLegalName("Jordan Ellis 2"), null);
+    assert.equal(normalizeLegalName("Jordan <Ellis>"), null);
+    assert.equal(normalizeLegalName("\u0000"), null);
+    assert.equal(normalizeLegalName(undefined), null);
+  });
+
+  it("rejects names longer than the printed limit", () => {
+    assert.equal(normalizeLegalName(`${"a".repeat(79)} b`), null);
+  });
+});
+
+describe("letter references and paths", () => {
+  const reference = "6f1c2b7a-4d31-4a0e-9f2c-2b6f0d8c1a53";
+
+  it("accepts a generated UUID and rejects anything else", () => {
+    assert.equal(isValidLetterReference(reference), true);
+    assert.equal(isValidLetterReference("not-a-reference"), false);
+    assert.equal(isValidLetterReference(undefined), false);
+  });
+
+  it("builds the public page and PDF paths", () => {
+    assert.equal(attendanceLetterPath(reference), `/verify/${reference}`);
+    assert.equal(
+      attendanceLetterPdfPath(reference),
+      `/api/attendance-letter?reference=${reference}`,
+    );
   });
 });
 

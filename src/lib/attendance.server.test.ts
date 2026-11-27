@@ -6,8 +6,10 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import {
   finalizeAttendance,
+  getLetterForVerification,
   listAttendanceForUser,
   recordAttendanceHeartbeat,
+  recordAttendanceLetterRequest,
 } from "./attendance.server.ts";
 
 const MIGRATIONS_DIR = join(fileURLToPath(new URL("../../", import.meta.url)), "migrations");
@@ -67,6 +69,7 @@ after(async () => {
 
 beforeEach(async () => {
   await pg.query("delete from meeting_attendance");
+  await pg.query("delete from attendance_verification_requests");
   await pg.query("delete from meetings");
 });
 
@@ -139,6 +142,49 @@ describe("rejoin behavior", () => {
     assert.ok(afterRejoin);
     assert.equal(afterRejoin.duration_seconds, beforeRejoin.duration_seconds);
     assert.equal(afterRejoin.left_at, null);
+  });
+});
+
+describe("attendance letter records", () => {
+  const REFERENCE = "6f1c2b7a-4d31-4a0e-9f2c-2b6f0d8c1a53";
+
+  it("snapshots the issued letter and reads it back for verification", async () => {
+    const snapshot = {
+      reference: REFERENCE,
+      participantName: "Jordan Ellis",
+      meetingTitle: "Midday Discussion",
+      meetingFormat: "Discussion",
+      leaderName: "Sam",
+      startsAt: "2026-11-27T17:00:00.000Z",
+      durationSeconds: 2760,
+      issuedAt: "2026-11-27T18:30:00.000Z",
+    };
+
+    await recordAttendanceLetterRequest(sql, {
+      reference: REFERENCE,
+      userId: USER,
+      meetingId: MEETING,
+      recipientEmail: "jordan@example.com",
+      status: "sent",
+      letterText: "letter body",
+      snapshot,
+    });
+
+    const found = await getLetterForVerification(sql, REFERENCE);
+    assert.ok(found);
+    assert.equal(found.reference, REFERENCE);
+    assert.equal(found.participantName, "Jordan Ellis");
+    assert.equal(found.meetingTitle, "Midday Discussion");
+    assert.equal(found.durationSeconds, 2760);
+    assert.match(found.startsAt, /2026-11-27/);
+  });
+
+  it("returns null for an unknown reference", async () => {
+    const found = await getLetterForVerification(
+      sql,
+      "00000000-0000-4000-8000-000000000000",
+    );
+    assert.equal(found, null);
   });
 });
 

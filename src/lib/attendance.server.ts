@@ -1,5 +1,10 @@
 import type { Sql } from "@/lib/db";
-import { attendanceEligibility, formatDuration, type AttendanceRecord } from "./attendance.ts";
+import {
+  attendanceEligibility,
+  formatDuration,
+  formatUtcDateTime,
+  type AttendanceRecord,
+} from "./attendance.ts";
 
 const ATTENDANCE_GAP_CAP_SECONDS = 30;
 
@@ -103,6 +108,7 @@ export type AttendanceForMeeting = {
   emailVerified: boolean;
   oauth: boolean;
   participantName: string;
+  legalName: string | null;
   lastRequestedAt: string | null;
 };
 
@@ -117,6 +123,7 @@ type AttendanceRow = {
   email_verified: boolean;
   oauth: boolean;
   participant_name: string;
+  legal_name: string | null;
   last_requested_at: string | null;
 };
 
@@ -140,6 +147,7 @@ export async function getAttendanceForMeeting(
              where account."userId" = u.id and account."providerId" <> 'credential'
            ) as oauth,
            participant_profile.display_name as participant_name,
+           participant_profile.legal_name,
            (select max(r.created_at)::text
               from attendance_verification_requests r
               where r.user_id = attendance.user_id
@@ -165,19 +173,26 @@ export async function getAttendanceForMeeting(
     emailVerified: Boolean(row.email_verified),
     oauth: Boolean(row.oauth),
     participantName: row.participant_name,
+    legalName: row.legal_name ?? null,
     lastRequestedAt: row.last_requested_at,
   };
 }
 
-function utcDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return `${new Intl.DateTimeFormat("en-US", {
-    dateStyle: "long",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(date)} UTC`;
-}
+/**
+ * What a letter says, frozen at the moment it is issued. The PDF and the public
+ * verification page are rendered from this snapshot, so later edits to a
+ * profile or meeting cannot change a letter already handed to someone.
+ */
+export type AttendanceLetterSnapshot = {
+  reference: string;
+  participantName: string;
+  meetingTitle: string;
+  meetingFormat: string;
+  leaderName: string;
+  startsAt: string;
+  durationSeconds: number;
+  issuedAt: string;
+};
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
@@ -202,36 +217,32 @@ export type AttendanceLetter = {
   html: string;
 };
 
-export function buildAttendanceLetter(input: {
-  reference: string;
-  participantName: string;
-  accountEmail: string;
-  meetingTitle: string;
-  meetingFormat: string;
-  leaderName: string;
-  startsAt: string;
-  durationSeconds: number;
-}): AttendanceLetter {
+export function buildAttendanceLetter(
+  input: AttendanceLetterSnapshot & { accountEmail: string; verifyUrl: string },
+): AttendanceLetter {
   const duration = formatDuration(input.durationSeconds);
   const subject = `Attendance verification letter — ${input.meetingTitle}`;
   const text = [
     "ALL DAY NA",
     "Attendance verification",
     "",
-    `Issued: ${utcDate(new Date().toISOString())}`,
+    `Issued: ${formatUtcDateTime(input.issuedAt)}`,
     `Reference: ${input.reference}`,
+    `Verify online: ${input.verifyUrl}`,
     "",
     `Participant: ${input.participantName}`,
     `Account email: ${input.accountEmail}`,
     `Meeting: ${input.meetingTitle}`,
     `Format: ${input.meetingFormat}`,
     `Meeting leader: ${input.leaderName}`,
-    `Scheduled start: ${utcDate(input.startsAt)}`,
+    `Scheduled start: ${formatUtcDateTime(input.startsAt)}`,
     `Recorded attendance: approximately ${duration}`,
     "",
     `Our records show that the account holder joined this online meeting and was present for approximately ${duration}. Attendance is recorded automatically from room presence and may not include time when the connection was lost, the tab was closed, or the person stepped away.`,
     "",
     "This letter confirms platform attendance only. It does not verify identity, recovery status, or completion of any court, parole, or treatment requirement. ALL DAY NA is peer-led and is not affiliated with Narcotics Anonymous World Services.",
+    "",
+    "Anyone holding the reference above can confirm this letter at the verification link, and can download a PDF copy there.",
     "",
     "Questions about this letter: support@alldayna.xyz",
   ].join("\n");
@@ -246,5 +257,93 @@ export function buildAttendanceLetter(input: {
       `<pre style="white-space:pre-wrap;font-family:inherit;font-size:14px;margin:0">${escapeHtml(text)}</pre>`,
       "</div>",
     ].join(""),
+  };
+}
+
+/** Store an issued letter with the snapshot its PDF and verification page use. */
+export async function recordAttendanceLetterRequest(
+  sql: Sql,
+  input: {
+    reference: string;
+    userId: string;
+    meetingId: string;
+    recipientEmail: string;
+    status: string;
+    letterText: string;
+    snapshot: AttendanceLetterSnapshot;
+  },
+): Promise<void> {
+  const sentAt = input.status === "sent" ? new Date().toISOString() : null;
+  await sql`
+    insert into attendance_verification_requests
+      (id, user_id, meeting_id, recipient_email, status, letter_text, sent_at,
+       participant_name, meeting_title, meeting_format, leader_name,
+       meeting_starts_at, duration_seconds, created_at)
+    values (
+      ${input.reference},
+      ${input.userId},
+      ${input.meetingId},
+      ${input.recipientEmail},
+      ${input.status},
+      ${input.letterText},
+      ${sentAt}::timestamptz,
+      ${input.snapshot.participantName},
+      ${input.snapshot.meetingTitle},
+      ${input.snapshot.meetingFormat},
+      ${input.snapshot.leaderName},
+      ${input.snapshot.startsAt}::timestamptz,
+      ${input.snapshot.durationSeconds},
+      ${input.snapshot.issuedAt}::timestamptz
+    )
+  `;
+}
+
+type LetterRow = {
+  participant_name: string;
+  meeting_title: string;
+  meeting_format: string;
+  leader_name: string;
+  starts_at: string;
+  duration_seconds: number;
+  issued_at: string;
+};
+
+/**
+ * Public lookup by reference. The snapshotted values win; the profile, meeting,
+ * and attendance joins are only fallbacks for letters issued before the
+ * snapshot columns existed. The account email is deliberately not returned.
+ */
+export async function getLetterForVerification(
+  sql: Sql,
+  reference: string,
+): Promise<AttendanceLetterSnapshot | null> {
+  const rows = await sql<LetterRow>`
+    select coalesce(r.participant_name, p.legal_name, p.display_name, 'ALL DAY NA member')
+             as participant_name,
+           coalesce(r.meeting_title, m.title, 'ALL DAY NA meeting') as meeting_title,
+           coalesce(r.meeting_format, m.format, 'Online meeting') as meeting_format,
+           coalesce(r.leader_name, lp.display_name, 'ALL DAY NA leader') as leader_name,
+           coalesce(r.meeting_starts_at, m.starts_at, r.created_at)::text as starts_at,
+           coalesce(r.duration_seconds, a.duration_seconds, 0) as duration_seconds,
+           r.created_at::text as issued_at
+    from attendance_verification_requests r
+    left join profiles p on p.user_id = r.user_id
+    left join meetings m on m.id = r.meeting_id
+    left join profiles lp on lp.user_id = m.leader_id
+    left join meeting_attendance a
+      on a.meeting_id = r.meeting_id and a.user_id = r.user_id
+    where r.id = ${reference}
+  `;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    reference,
+    participantName: row.participant_name,
+    meetingTitle: row.meeting_title,
+    meetingFormat: row.meeting_format,
+    leaderName: row.leader_name,
+    startsAt: row.starts_at,
+    durationSeconds: Number(row.duration_seconds ?? 0),
+    issuedAt: row.issued_at,
   };
 }

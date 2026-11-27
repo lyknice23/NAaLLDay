@@ -10,6 +10,8 @@ type EmailMessage = {
   subject: string;
   html: string;
   text: string;
+  /** Resend accepts base64 content; used for the attendance letter PDF. */
+  attachments?: { filename: string; content: string }[];
 };
 
 type EmailResult = { ok: true; devCode?: string } | { ok: false; error: string };
@@ -53,6 +55,7 @@ async function sendEmail(
         subject: message.subject,
         html: message.html,
         text: message.text,
+        ...(message.attachments?.length ? { attachments: message.attachments } : {}),
       }),
     });
 

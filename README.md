@@ -35,7 +35,7 @@ final policy before launch.
 - Rooms hold **35 people**. Joining closes **20 minutes after the scheduled
   start**; anyone who joined before the lock keeps access afterwards.
 - A leader can always open their own room, even after the join lock.
-- Attendance is saved automatically with the meeting, join time, and time present. After a meeting ends, a member with at least **45 minutes** of recorded attendance can request an attendance verification letter from the bottom of their homepage; it is emailed to the address on their account.
+- Attendance is saved automatically with the meeting, join time, and time present. After a meeting ends, a member with at least **45 minutes** of recorded attendance can request an attendance verification letter from the bottom of their homepage. The member enters the full legal name the letter should carry (the meeting display name is often just a first name); it is saved for future letters. The letter is emailed to the address on their account as a PDF and carries a reference. Anyone holding the reference can open `/verify/<reference>` to confirm the letter and download the same PDF. Verification links use the configured origin, or the request's own origin in preview and local development, so a letter never points at the wrong deployment.
 - Rooms include camera and microphone controls, a live participant list, and
   chat. Video and audio run through LiveKit Cloud so every participant can
   publish without a peer-to-peer mesh. Presence is tracked with heartbeats, so
@@ -120,6 +120,7 @@ verification code is printed in the server log and shown on screen.
 | ------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`      | No         | Postgres connection string. Without it the app uses an in-memory PGlite database, which resets when the server restarts.           |
 | `VITE_AUTH_ENABLED` | No         | `"true"` (the default) requires sign-in. Set `"false"` only for a local demo user with no auth.                                    |
+| `BETTER_AUTH_URL`   | Deploy     | Public origin of the app, for example `https://www.alldayna.xyz`. Injected by the deployer. Verification links in attendance letters use it; without it, preview and local development use the request's own origin. |
 | `RESEND_API_KEY`    | Production | Sends sign-up verification, password-reset, and attendance-verification emails. Without it, local development shows the verification code or letter in the app instead. |
 | `EMAIL_FROM`        | No         | Verified sender for Resend, for example `ALL DAY NA <hello@yourdomain.com>`. Defaults to Resend's onboarding sender.               |
 | `LIVEKIT_URL`       | Video      | LiveKit Cloud WebSocket URL, for example `wss://your-project.livekit.cloud`.                                                        |

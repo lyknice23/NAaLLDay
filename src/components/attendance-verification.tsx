@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { listAttendance, requestAttendanceLetter } from "@/lib/attendance.functions";
-import { MIN_ATTENDANCE_MINUTES, formatDuration, type AttendanceRecord } from "@/lib/attendance";
+import {
+  LEGAL_NAME_MAX_LENGTH,
+  MIN_ATTENDANCE_MINUTES,
+  formatDuration,
+  type AttendanceRecord,
+} from "@/lib/attendance";
 
 type LetterDelivery = {
   sentTo: string;
+  reference: string;
   preview: string | null;
 };
 
 export function AttendanceVerification() {
   const [records, setRecords] = useState<AttendanceRecord[] | null>(null);
   const [meetingId, setMeetingId] = useState("");
+  const [legalName, setLegalName] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [delivery, setDelivery] = useState<LetterDelivery | null>(null);
@@ -17,10 +25,11 @@ export function AttendanceVerification() {
   useEffect(() => {
     let cancelled = false;
     listAttendance()
-      .then((rows) => {
+      .then((result) => {
         if (cancelled) return;
-        setRecords(rows);
-        setMeetingId(rows.find((row) => row.eligible)?.meetingId ?? "");
+        setRecords(result.records);
+        setLegalName(result.legalName ?? "");
+        setMeetingId(result.records.find((row) => row.eligible)?.meetingId ?? "");
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -45,8 +54,9 @@ export function AttendanceVerification() {
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
         We save the meeting, when you joined, and how long you were present. After a meeting ends,
-        choose it below and we will email a verification letter to the address on your account. It
-        is a platform attendance record, not an official court or parole document.
+        choose it below and we will email a PDF letter to the address on your account. Every letter
+        has a reference anyone can check, and a PDF copy you can download or print. It is a platform
+        attendance record, not an official court or parole document.
       </p>
 
       {records === null && <p className="mt-4 text-sm text-muted">Loading your attendance…</p>}
@@ -85,13 +95,13 @@ export function AttendanceVerification() {
 
       {eligible.length > 0 && (
         <form
-          className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end"
+          className="mt-5 space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
             setPending(true);
             setError("");
             setDelivery(null);
-            void requestAttendanceLetter({ data: { meetingId } })
+            void requestAttendanceLetter({ data: { meetingId, legalName } })
               .then((result) => {
                 if (!result.ok) {
                   setError(result.error);
@@ -99,6 +109,7 @@ export function AttendanceVerification() {
                 }
                 setDelivery({
                   sentTo: result.sentTo,
+                  reference: result.reference,
                   preview: result.preview,
                 });
               })
@@ -108,32 +119,50 @@ export function AttendanceVerification() {
               .finally(() => setPending(false));
           }}
         >
-          <label className="flex-1 text-sm text-muted">
-            Meeting you attended
-            <select
-              value={meetingId}
-              onChange={(event) => {
-                setMeetingId(event.target.value);
-                setDelivery(null);
-                setError("");
-              }}
+          <label className="block text-sm text-muted">
+            Full legal name
+            <input
+              required
+              maxLength={LEGAL_NAME_MAX_LENGTH}
+              value={legalName}
+              onChange={(event) => setLegalName(event.target.value)}
+              placeholder="First and last name"
               className="mt-1 h-11 w-full rounded-lg border border-border bg-bg px-3 text-fg"
-            >
-              {eligible.map((record) => (
-                <option key={record.meetingId} value={record.meetingId}>
-                  {record.title} · {new Date(record.startsAt).toLocaleDateString()} ·{" "}
-                  {formatDuration(record.durationSeconds)}
-                </option>
-              ))}
-            </select>
+            />
+            <span className="mt-1 block text-xs text-muted">
+              This is printed on the letter. We save it to your profile for future letters; it is
+              never shown in meetings.
+            </span>
           </label>
-          <button
-            type="submit"
-            disabled={pending || !meetingId}
-            className="h-11 shrink-0 rounded-lg bg-primary px-5 font-semibold text-primary-fg disabled:opacity-60"
-          >
-            {pending ? "Preparing letter…" : "Email my letter"}
-          </button>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex-1 text-sm text-muted">
+              Meeting you attended
+              <select
+                value={meetingId}
+                onChange={(event) => {
+                  setMeetingId(event.target.value);
+                  setDelivery(null);
+                  setError("");
+                }}
+                className="mt-1 h-11 w-full rounded-lg border border-border bg-bg px-3 text-fg"
+              >
+                {eligible.map((record) => (
+                  <option key={record.meetingId} value={record.meetingId}>
+                    {record.title} · {new Date(record.startsAt).toLocaleDateString()} ·{" "}
+                    {formatDuration(record.durationSeconds)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="submit"
+              disabled={pending || !meetingId || legalName.trim().length < 3}
+              className="h-11 shrink-0 rounded-lg bg-primary px-5 font-semibold text-primary-fg disabled:opacity-60"
+            >
+              {pending ? "Preparing letter…" : "Email my letter"}
+            </button>
+          </div>
         </form>
       )}
 
@@ -152,10 +181,21 @@ export function AttendanceVerification() {
             </p>
           ) : (
             <p>
-              Letter sent to <span className="font-semibold">{delivery.sentTo}</span>. Check your
-              inbox and spam folder. You can request another copy after one minute.
+              Letter sent to <span className="font-semibold">{delivery.sentTo}</span> with a PDF
+              attached. Check your inbox and spam folder. You can request another copy after one
+              minute.
             </p>
           )}
+          <p className="mt-2">
+            <Link
+              to="/verify/$reference"
+              params={{ reference: delivery.reference }}
+              className="font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              Open the verification page
+            </Link>{" "}
+            <span className="text-muted">to download or print the PDF.</span>
+          </p>
           {delivery.preview && (
             <details className="mt-3">
               <summary className="cursor-pointer font-semibold text-primary">

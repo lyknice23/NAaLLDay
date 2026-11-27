@@ -91,10 +91,14 @@ function PrivacyPage() {
             </p>
             <p>
               <strong className="text-fg">Attendance verification requests.</strong> When you ask us
-              to email a verification letter, we store the meeting, your account email address, the
-              generated letter, the request date, and whether delivery succeeded. The letter is based
-              on your platform attendance record and is sent through Resend to the email address on
-              your account.
+              to email a verification letter, we store the meeting, the full legal name you enter for
+              the letter, your account email address, the generated letter, the reference that
+              identifies it, the request date, and whether delivery succeeded. The legal name is kept
+              on your profile so later letters can reuse it; it is not shown in meetings or on the
+              Community board. The letter and its PDF are based on your platform attendance record
+              and are sent through Resend to the email address on your account. Anyone who has the
+              reference can open the public verification page and see the name, meeting, and recorded
+              attendance printed on that letter.
             </p>
             <p>
               <strong className="text-fg">Camera and microphone.</strong> Camera and microphone
