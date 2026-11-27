@@ -32,11 +32,14 @@ final policy before launch.
 - Leaders schedule meetings at any hour, choose a format (Discussion, Speaker,
   Step Study, Literature, or Newcomer). Every meeting is one hour long.
 - Attendees can sign up for a reminder or join directly from the board.
-- Rooms hold **50 people**. Joining closes **20 minutes after the scheduled
+- Rooms hold **35 people**. Joining closes **20 minutes after the scheduled
   start**; anyone who joined before the lock keeps access afterwards.
 - A leader can always open their own room, even after the join lock.
+- Attendance is saved automatically with the meeting, join time, and time present. After a meeting ends, a member can request an attendance verification letter from the bottom of their homepage; it is emailed to the address on their account.
 - Rooms include camera and microphone controls, a live participant list, and
-  chat. Presence is tracked with heartbeats, so the room count stays current.
+  chat. Video and audio run through LiveKit Cloud so every participant can
+  publish without a peer-to-peer mesh. Presence is tracked with heartbeats, so
+  the room count stays current.
 - Ended meetings close automatically, and full rooms keep checking for a freed
   seat.
 
@@ -54,9 +57,10 @@ final policy before launch.
 - Set a clean date and see the running day count.
 - Mark any day between the clean date and today on a month calendar, with an
   optional note for each day.
-- Track milestone chips and share an achievement to the community board once
-  it is reached.
+- Track milestone chips and share an achievement once it is reached.
 - Move between months while keeping every marked day and note.
+- Choose to show your first name and clean time on the Community board; your
+  notes and exact clean date stay private.
 
 ### Sponsors
 
@@ -64,7 +68,8 @@ final policy before launch.
 - Sponsors offering their time confirm **at least 2 years clean** and choose a
   **12-hour daily availability window** in their local time.
 - An "Available now" badge shows when someone's window is open.
-- A connection opens a private two-person video room.
+- Members can comment on either kind of post before connecting.
+- A connection opens a private two-person room with video and persistent chat.
 - Clean time is self-reported and cannot be verified by the app. The board asks
   people to be honest about it.
 
@@ -84,6 +89,7 @@ final policy before launch.
 | Build   | Vite 8, Nitro (Vercel preset)                                 |
 | Data    | PostgreSQL via `pg` (Neon-compatible), or PGlite fallback     |
 | Auth    | Better Auth                                                   |
+| Video   | LiveKit Cloud SFU and TURN                                    |
 | Tests   | Node's built-in test runner                                   |
 | Quality | TypeScript, ESLint, Prettier, GitHub Actions                  |
 
@@ -114,8 +120,11 @@ verification code is printed in the server log and shown on screen.
 | ------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`      | No         | Postgres connection string. Without it the app uses an in-memory PGlite database, which resets when the server restarts.           |
 | `VITE_AUTH_ENABLED` | No         | `"true"` (the default) requires sign-in. Set `"false"` only for a local demo user with no auth.                                    |
-| `RESEND_API_KEY`    | Production | Sends the 6-digit verification email. Without it, local development logs the code and shows it on the verification screen instead. |
+| `RESEND_API_KEY`    | Production | Sends sign-up verification, password-reset, and attendance-verification emails. Without it, local development shows the verification code or letter in the app instead. |
 | `EMAIL_FROM`        | No         | Verified sender for Resend, for example `ALL DAY NA <hello@yourdomain.com>`. Defaults to Resend's onboarding sender.               |
+| `LIVEKIT_URL`       | Video      | LiveKit Cloud WebSocket URL, for example `wss://your-project.livekit.cloud`.                                                        |
+| `LIVEKIT_API_KEY`   | Video      | LiveKit Cloud API key used by the server to mint room tokens.                                                                       |
+| `LIVEKIT_API_SECRET`| Video      | LiveKit Cloud API secret. Server-only; never expose it to the client.                                                               |
 
 Never commit credentials. For local development, put them in `.env.local`
 (ignored by Git); the `dev`, `build`, `preview`, and `db:migrate` scripts load
@@ -150,7 +159,7 @@ applied server-side, not just hidden in the UI:
 
 | Rule                 | Behavior                                          |
 | -------------------- | ------------------------------------------------- |
-| Capacity             | 50 people in a room                               |
+| Capacity             | 35 people in a room                               |
 | Join lock            | No new joins 20 minutes after the scheduled start |
 | Returning attendees  | Anyone who joined before the lock keeps access    |
 | Leaders              | Can always open their own room                    |
@@ -215,8 +224,8 @@ Configure the following in the hosting environment:
 
 - `DATABASE_URL` for durable data. Without it, a deployed app falls back to
   in-memory PGlite and data will not survive.
-- `RESEND_API_KEY` and a verified `EMAIL_FROM` so sign-up verification emails
-  can be delivered.
+- `RESEND_API_KEY` and a verified `EMAIL_FROM` so verification and attendance
+  letters can be delivered.
 - The auth provider credentials used by Better Auth.
 
 Local HTTP development uses a bearer session token because Chromium rejects
