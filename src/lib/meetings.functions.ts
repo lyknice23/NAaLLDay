@@ -9,6 +9,7 @@ import {
   type RoomAccess,
   type RoomState,
 } from "@/lib/room-access";
+import { finalizeAttendance, recordAttendanceHeartbeat } from "@/lib/attendance.server";
 
 export type Profile = {
   displayName: string;
@@ -1056,6 +1057,7 @@ export const heartbeat = createServerFn({ method: "POST" })
         values (${data.meetingId}, ${context.userId}, now())
         on conflict (meeting_id, user_id) do update set last_seen = now()
       `;
+      await recordAttendanceHeartbeat(sql, data.meetingId, context.userId);
       await sql`
         update meetings set leader_attended = true
         where id = ${data.meetingId}
@@ -1100,8 +1102,11 @@ export const leaveRoom = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { meetingId: string }) => ({ meetingId: String(input?.meetingId ?? "") }))
   .handler(async ({ context, data }) => {
-    if (!(await roomWritable(context.userId, data.meetingId))) return { ok: false as const };
     const sql = await getSql();
+    // Finalize before cleanup so a meeting that just ended still keeps the last
+    // presence window. Both statements are scoped to the signed-in user, so no
+    // room-membership check is needed here.
+    await finalizeAttendance(sql, data.meetingId, context.userId);
     await sql`delete from room_presence where meeting_id = ${data.meetingId} and user_id = ${context.userId}`;
     return { ok: true as const };
   });

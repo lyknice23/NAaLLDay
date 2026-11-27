@@ -3,11 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { LoginCard } from "@/components/login-card";
 import { AppHeader } from "@/components/app-header";
+import { AttendanceVerification } from "@/components/attendance-verification";
 import {
   createMeeting,
   getMe,
   listMeetings,
   loadDemo,
+  ROOM_CAPACITY,
   rescheduleMeeting,
   saveProfile,
   type Meeting,
@@ -294,7 +296,8 @@ function Dashboard({
                     {meeting.mine ? " · yours" : ""}
                   </p>
                   <p className="mt-1 text-sm text-muted">
-                    {meeting.signupCount ?? 0} signed up · {meeting.liveCount ?? 0} / 50 in the room
+                    {meeting.signupCount ?? 0} signed up · {meeting.liveCount ?? 0} /{" "}
+                    {ROOM_CAPACITY} in the room
                     {!meeting.mine && !closed ? ` · joins close ${lockLabel}` : ""}
                   </p>
                   {meeting.description && (
@@ -360,6 +363,7 @@ function Dashboard({
             );
           })}
         </ul>
+        <AttendanceVerification />
       </main>
     </div>
   );
